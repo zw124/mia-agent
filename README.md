@@ -64,7 +64,3 @@ See LICENSE.
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=zhiliao000-star/mia-agent&type=Date)](https://www.star-history.com/#zhiliao000-star/mia-agent&Date)
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=zhiliao000-star/mia-agent&type=Date)](https://www.star-history.com/#zhiliao000-star/mia-agent&Date)
