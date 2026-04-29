@@ -1,3 +1,4 @@
+import json
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -37,6 +38,7 @@ class SendBlueWebhook(BaseModel):
     service: str | None = None
     group_display_name: str | None = None
 
+
 class MemoryRecord(BaseModel):
     id: str
     content: str
@@ -69,3 +71,16 @@ class JudgeDecision(BaseModel):
 
 
 JsonDict = dict[str, Any]
+
+
+def dump_compact_json(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
+def parse_llm_json(content: Any) -> Any:
+    text = str(content).strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if len(lines) >= 3:
+            text = "\n".join(lines[1:-1]).strip()
+    return json.loads(text)

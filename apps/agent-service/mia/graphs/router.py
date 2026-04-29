@@ -7,6 +7,7 @@ from langgraph.graph import END, START, StateGraph
 
 from mia.integrations.convex import ConvexClient
 from mia.llm import build_chat_model
+from mia.models import parse_llm_json
 from mia.settings import Settings
 from mia.tools.registry import AVAILABLE_TOOL_NAMES, OWNER_ONLY_TOOLS, public_tool_descriptions, tool_registry
 
@@ -59,6 +60,32 @@ class RouterDecision(TypedDict):
     allowed_tools: list[str]
 
 
+def initial_router_state(
+    *,
+    run_id: str,
+    message: str,
+    relevant_memories: list[dict[str, Any]],
+    from_number: str,
+    sendblue_number: str | None,
+    message_handle: str,
+) -> MiaRouterState:
+    return {
+        "run_id": run_id,
+        "message": message,
+        "relevant_memories": relevant_memories,
+        "from_number": from_number,
+        "sendblue_number": sendblue_number,
+        "message_handle": message_handle,
+        "route": "direct_reply",
+        "sub_agent_name": "",
+        "sub_agent_objective": "",
+        "allowed_tools": [],
+        "agent_result": "",
+        "reply": "",
+        "thoughts": [],
+    }
+
+
 def memory_context(state: MiaRouterState) -> str:
     memories = state.get("relevant_memories", [])
     if not memories:
@@ -67,15 +94,6 @@ def memory_context(state: MiaRouterState) -> str:
         f"- [{memory.get('tier')}/{memory.get('segment')}] {memory.get('content')}"
         for memory in memories
     )
-
-
-def _load_router_json(content: Any) -> dict[str, Any]:
-    text = str(content).strip()
-    if text.startswith("```"):
-        lines = text.splitlines()
-        if len(lines) >= 3:
-            text = "\n".join(lines[1:-1]).strip()
-    return json.loads(text)
 
 
 def _validate_router_decision(parsed: dict[str, Any]) -> RouterDecision:
@@ -141,7 +159,7 @@ async def _repair_router_decision(
             ),
         ]
     )
-    return _validate_router_decision(_load_router_json(response.content))
+    return _validate_router_decision(parse_llm_json(response.content))
 
 
 async def parent_router(state: MiaRouterState, settings: Settings, convex: ConvexClient) -> dict:
@@ -153,7 +171,7 @@ async def parent_router(state: MiaRouterState, settings: Settings, convex: Conve
         ]
     )
     try:
-        decision = _validate_router_decision(_load_router_json(response.content))
+        decision = _validate_router_decision(parse_llm_json(response.content))
     except (json.JSONDecodeError, TypeError, ValueError):
         try:
             decision = await _repair_router_decision(llm=llm, raw_content=response.content, state=state)

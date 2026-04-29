@@ -14,7 +14,7 @@
     "dev:convex": "convex dev",
     "build": "next build apps/dashboard",
     "typecheck": "tsc --noEmit",
-    "lint": "next lint apps/dashboard",
+    "lint": "eslint apps/dashboard/app apps/dashboard/components --quiet",
     "test:python": "cd apps/agent-service && pytest",
     "test": "npm run typecheck && npm run test:python"
   },
@@ -26,6 +26,8 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
+    "@eslint/js": "^9.39.4",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.2",

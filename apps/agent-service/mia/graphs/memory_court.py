@@ -1,11 +1,17 @@
-import json
 from typing import Any, TypedDict
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 
 from mia.llm import build_chat_model
-from mia.models import MEMORY_COURT_ACTIONS, AdversarialRound, CourtProposal, JudgeDecision
+from mia.models import (
+    MEMORY_COURT_ACTIONS,
+    AdversarialRound,
+    CourtProposal,
+    JudgeDecision,
+    dump_compact_json,
+    parse_llm_json,
+)
 from mia.settings import Settings
 
 
@@ -17,10 +23,6 @@ class MemoryCourtState(TypedDict):
     adversarial_rounds: list[dict[str, Any]]
     judge_decisions: list[dict[str, Any]]
     round: int
-
-
-def _json_dump(value: Any) -> str:
-    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
 
 
 async def consolidator(state: MemoryCourtState, settings: Settings) -> dict:
@@ -41,11 +43,11 @@ async def consolidator(state: MemoryCourtState, settings: Settings) -> dict:
                     "proposed_content nullable, reason."
                 )
             ),
-            HumanMessage(content=_json_dump(candidates)),
+            HumanMessage(content=dump_compact_json(candidates)),
         ]
     )
     try:
-        raw = json.loads(str(response.content))
+        raw = parse_llm_json(response.content)
         proposals = [CourtProposal.model_validate(item).model_dump() for item in raw]
     except Exception:
         proposals = [
@@ -72,7 +74,7 @@ async def adversarial_agent(state: MemoryCourtState, settings: Settings) -> dict
                 )
             ),
             HumanMessage(
-                content=_json_dump(
+                content=dump_compact_json(
                     {
                         "round": state["round"] + 1,
                         "memories": state["memories"],
@@ -83,7 +85,7 @@ async def adversarial_agent(state: MemoryCourtState, settings: Settings) -> dict
         ]
     )
     try:
-        raw = json.loads(str(response.content))
+        raw = parse_llm_json(response.content)
         arguments = [AdversarialRound.model_validate(item).model_dump() for item in raw]
     except Exception:
         arguments = [
@@ -117,7 +119,7 @@ async def judge(state: MemoryCourtState, settings: Settings) -> dict:
                 )
             ),
             HumanMessage(
-                content=_json_dump(
+                content=dump_compact_json(
                     {
                         "memories": state["memories"],
                         "proposals": state["proposals"],
@@ -128,7 +130,7 @@ async def judge(state: MemoryCourtState, settings: Settings) -> dict:
         ]
     )
     try:
-        raw = json.loads(str(response.content))
+        raw = parse_llm_json(response.content)
         decisions = [JudgeDecision.model_validate(item).model_dump() for item in raw]
     except Exception:
         decisions = [

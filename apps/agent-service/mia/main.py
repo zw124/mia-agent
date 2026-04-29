@@ -5,7 +5,7 @@ import uuid
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 
 from mia.graphs.memory_court import build_memory_court_graph
-from mia.graphs.router import build_router_graph
+from mia.graphs.router import build_router_graph, initial_router_state
 from mia.integrations.convex import ConvexClient
 from mia.integrations.sendblue import SendBlueClient
 from mia.models import SendBlueWebhook
@@ -237,21 +237,14 @@ async def receive_sendblue(
         relevant_memories = await convex.relevant_memories(message=payload.content)
         graph = build_router_graph(settings, convex)
         result = await graph.ainvoke(
-            {
-                "run_id": run_id,
-                "message": payload.content,
-                "relevant_memories": relevant_memories,
-                "from_number": payload.from_number or payload.number,
-                "sendblue_number": payload.sendblue_number or payload.to_number,
-                "message_handle": payload.message_handle,
-                "route": "direct_reply",
-                "sub_agent_name": "",
-                "sub_agent_objective": "",
-                "allowed_tools": [],
-                "agent_result": "",
-                "reply": "",
-                "thoughts": [],
-            }
+            initial_router_state(
+                run_id=run_id,
+                message=payload.content,
+                relevant_memories=relevant_memories,
+                from_number=payload.from_number or payload.number,
+                sendblue_number=payload.sendblue_number or payload.to_number,
+                message_handle=payload.message_handle,
+            )
         )
     except Exception as exc:
         await stop_typing_indicator(typing_stop, typing_task)

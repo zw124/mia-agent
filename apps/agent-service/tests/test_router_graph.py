@@ -137,21 +137,16 @@ def settings() -> Settings:
 
 
 def base_state() -> router.MiaRouterState:
-    return {
-        "run_id": "run-1",
-        "message": "Can you debug this Python function?",
-        "relevant_memories": [{"tier": "long_term", "segment": "preferences", "content": "Prefers concise replies"}],
-        "from_number": "+15551110000",
-        "sendblue_number": "+15552220000",
-        "message_handle": "msg-1",
-        "route": "direct_reply",
-        "sub_agent_name": "",
-        "sub_agent_objective": "",
-        "allowed_tools": [],
-        "agent_result": "",
-        "reply": "",
-        "thoughts": [],
-    }
+    return router.initial_router_state(
+        run_id="run-1",
+        message="Can you debug this Python function?",
+        relevant_memories=[
+            {"tier": "long_term", "segment": "preferences", "content": "Prefers concise replies"}
+        ],
+        from_number="+15551110000",
+        sendblue_number="+15552220000",
+        message_handle="msg-1",
+    )
 
 
 @pytest.mark.asyncio
