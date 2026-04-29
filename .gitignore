@@ -24,6 +24,10 @@ apps/**/.env.local
 # logs
 *.log
 .mia/logs/
+.mia/*.json
+
+# local third-party reference checkouts
+openclaw/
 
 # system
 .DS_Store

@@ -439,6 +439,15 @@ h3 {
   margin-top: 16px;
 }
 
+.link-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.link-stack .link-row {
+  margin-top: 0;
+}
+
 .link-row a,
 .copy-button,
 .link-row code,

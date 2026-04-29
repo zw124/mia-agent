@@ -128,3 +128,28 @@ export const recent = query({
       .take(args.limit ?? 20);
   },
 });
+
+export const expireStale = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const stale = await ctx.db
+      .query("pendingActions")
+      .withIndex("by_created_at")
+      .filter((q) =>
+        q.and(q.eq(q.field("status"), "pending"), q.lt(q.field("expiresAt"), now)),
+      )
+      .take(100);
+    for (const action of stale) {
+      await ctx.db.patch(action._id, {
+        status: "expired",
+        completedAt: now,
+        error: "System heartbeat expired this approval.",
+      });
+    }
+    return {
+      expired: stale.length,
+      codes: stale.map((action) => action.code),
+    };
+  },
+});

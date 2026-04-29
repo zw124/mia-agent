@@ -51,7 +51,12 @@ class ConvexStub:
 class SendBlueStub:
     def __init__(self, *, fail: bool = False) -> None:
         self.sent: list[dict[str, str]] = []
+        self.typing: list[str] = []
         self.fail = fail
+
+    async def send_typing_indicator(self, **kwargs: str) -> dict[str, str]:
+        self.typing.append(kwargs["number"])
+        return {"number": kwargs["number"], "status": "SENT"}
 
     async def send_message(self, **kwargs: str) -> dict[str, str]:
         if self.fail:
@@ -118,6 +123,7 @@ def test_sendblue_webhook_dedupes_before_agent_execution(monkeypatch) -> None:
     assert response.status_code == 200
     assert response.json()["deduped"] is True
     assert sendblue.sent == []
+    assert sendblue.typing == []
     assert convex.started == []
     app.dependency_overrides.clear()
 
@@ -139,6 +145,7 @@ def test_sendblue_webhook_runs_agent_and_sends_reply(monkeypatch) -> None:
 
     assert response.status_code == 200
     assert response.json()["reply"] == "handled"
+    assert sendblue.typing == ["+15551110000"]
     assert sendblue.sent == [{"number": "+15551110000", "content": "handled"}]
     assert len(convex.started) == 1
     assert convex.completed[0]["active_agent"] == "direct_reply"

@@ -180,4 +180,12 @@ export default defineSchema({
   })
     .index("by_run_id", ["runId"])
     .index("by_created_at", ["createdAt"]),
+
+  systemHeartbeats: defineTable({
+    source: v.string(),
+    status: v.union(v.literal("ok"), v.literal("degraded"), v.literal("failed")),
+    checks: v.any(),
+    repairs: v.array(v.string()),
+    createdAt: v.number(),
+  }).index("by_created_at", ["createdAt"]),
 });

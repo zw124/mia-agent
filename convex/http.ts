@@ -205,4 +205,31 @@ http.route({
   }),
 });
 
+http.route({
+  path: "/internal/heartbeat/repair",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
+    const body = await request.json();
+    const staleRuns = await ctx.runMutation(internal.agentRuns.repairStale, {
+      maxAgeMs:
+        typeof body.maxRunAgeMs === "number" && Number.isFinite(body.maxRunAgeMs)
+          ? body.maxRunAgeMs
+          : 15 * 60 * 1000,
+    });
+    const expiredApprovals = await ctx.runMutation(internal.pendingActions.expireStale, {});
+    return json({ staleRuns, expiredApprovals });
+  }),
+});
+
+http.route({
+  path: "/internal/heartbeat/record",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
+    const body = await request.json();
+    return json(await ctx.runMutation(internal.systemHealth.recordHeartbeat, body));
+  }),
+});
+
 export default http;

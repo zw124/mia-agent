@@ -74,3 +74,28 @@ export const active = query({
     return running?.activeAgent ?? null;
   },
 });
+
+export const repairStale = internalMutation({
+  args: { maxAgeMs: v.number() },
+  handler: async (ctx, args) => {
+    const cutoff = Date.now() - args.maxAgeMs;
+    const stale = await ctx.db
+      .query("agentRuns")
+      .withIndex("by_started_at")
+      .filter((q) =>
+        q.and(q.eq(q.field("status"), "running"), q.lt(q.field("startedAt"), cutoff)),
+      )
+      .take(50);
+    for (const run of stale) {
+      await ctx.db.patch(run._id, {
+        status: "failed",
+        completedAt: Date.now(),
+        error: "System heartbeat marked this run as stale.",
+      });
+    }
+    return {
+      repaired: stale.length,
+      runIds: stale.map((run) => run.runId),
+    };
+  },
+});

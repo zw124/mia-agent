@@ -17,6 +17,7 @@ import type * as memories from "../memories.js";
 import type * as memoryCourt from "../memoryCourt.js";
 import type * as messages from "../messages.js";
 import type * as pendingActions from "../pendingActions.js";
+import type * as systemHealth from "../systemHealth.js";
 import type * as thoughtLogs from "../thoughtLogs.js";
 
 import type {
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   memoryCourt: typeof memoryCourt;
   messages: typeof messages;
   pendingActions: typeof pendingActions;
+  systemHealth: typeof systemHealth;
   thoughtLogs: typeof thoughtLogs;
 }>;
 

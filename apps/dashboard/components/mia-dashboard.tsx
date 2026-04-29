@@ -239,6 +239,7 @@ function OnboardingExperience({ onFinish }: { onFinish: () => void }) {
   const [step, setStep] = useState(0);
   const [termsScrolled, setTermsScrolled] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [repositoryOpened, setRepositoryOpened] = useState(false);
   const [setupStatus, setSetupStatus] = useState<Record<string, boolean | string> | null>(null);
   const [setupSaved, setSetupSaved] = useState(false);
   const [setupError, setSetupError] = useState("");
@@ -387,10 +388,20 @@ function OnboardingExperience({ onFinish }: { onFinish: () => void }) {
       body: "Mia is open source. Star the repository on GitHub to show your support and help the project grow.",
       icon: ExternalLink,
       content: (
-        <div className="link-row">
-          <a href="https://github.com/zhiliao000-star/mia-agent" target="_blank" rel="noreferrer">
+        <div className="link-stack">
+          <div className="link-row">
+            <a
+              href="https://github.com/zhiliao000-star/mia-agent"
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setRepositoryOpened(true)}
+            >
             Star on GitHub <ExternalLink size={14} />
-          </a>
+            </a>
+          </div>
+          <p className="quiet-note">
+            {repositoryOpened ? "Repository opened. You can continue." : "Open the repository link to continue."}
+          </p>
         </div>
       ),
     },
@@ -516,7 +527,7 @@ function OnboardingExperience({ onFinish }: { onFinish: () => void }) {
 
   const current = steps[step];
   const isLast = step === steps.length - 1;
-  const cannotContinue = (step === 1 && (!termsScrolled || !termsAccepted)) || step === 2;
+  const cannotContinue = (step === 1 && (!termsScrolled || !termsAccepted)) || (step === 2 && !repositoryOpened);
 
   return (
     <main className="onboarding-stage">
@@ -560,7 +571,7 @@ function OnboardingExperience({ onFinish }: { onFinish: () => void }) {
                 className="next-button"
                 disabled={cannotContinue}
                 onClick={() => {
-                  if (cannotContinue && step !== 2) return;
+                  if (cannotContinue) return;
                   if (isLast) {
                     onFinish();
                   } else {
