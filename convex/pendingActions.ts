@@ -1,6 +1,35 @@
 import { v } from "convex/values";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalMutation, internalQuery, query } from "./_generated/server";
 import { nullableString, pendingActionRisk } from "./validators";
+
+type PendingActionContext = MutationCtx | QueryCtx;
+
+async function activePendingActions(ctx: PendingActionContext, requesterNumber: string) {
+  const actions = await ctx.db
+    .query("pendingActions")
+    .withIndex("by_requester_status", (q) =>
+      q.eq("requesterNumber", requesterNumber).eq("status", "pending"),
+    )
+    .order("desc")
+    .take(2);
+  return actions.filter((action) => action.expiresAt >= Date.now());
+}
+
+async function patchByCode(
+  ctx: MutationCtx,
+  code: string,
+  requesterNumber: string,
+  patch: Record<string, unknown>,
+) {
+  const action = await ctx.db
+    .query("pendingActions")
+    .withIndex("by_code", (q) => q.eq("code", code))
+    .first();
+  if (action && action.requesterNumber === requesterNumber) {
+    await ctx.db.patch(action._id, patch);
+  }
+}
 
 export const create = internalMutation({
   args: {
@@ -35,14 +64,7 @@ export const create = internalMutation({
 export const findLatestPending = internalQuery({
   args: { requesterNumber: v.string() },
   handler: async (ctx, args) => {
-    const actions = await ctx.db
-      .query("pendingActions")
-      .withIndex("by_requester_status", (q) =>
-        q.eq("requesterNumber", args.requesterNumber).eq("status", "pending"),
-      )
-      .order("desc")
-      .take(2);
-    const active = actions.filter((action) => action.expiresAt >= Date.now());
+    const active = await activePendingActions(ctx, args.requesterNumber);
     if (active.length !== 1) {
       return null;
     }
@@ -53,14 +75,7 @@ export const findLatestPending = internalQuery({
 export const approveLatest = internalMutation({
   args: { requesterNumber: v.string() },
   handler: async (ctx, args) => {
-    const actions = await ctx.db
-      .query("pendingActions")
-      .withIndex("by_requester_status", (q) =>
-        q.eq("requesterNumber", args.requesterNumber).eq("status", "pending"),
-      )
-      .order("desc")
-      .take(2);
-    const active = actions.filter((action) => action.expiresAt >= Date.now());
+    const active = await activePendingActions(ctx, args.requesterNumber);
     if (active.length === 0) {
       return { ok: false, reason: "none" };
     }
@@ -80,17 +95,11 @@ export const complete = internalMutation({
     result: v.string(),
   },
   handler: async (ctx, args) => {
-    const action = await ctx.db
-      .query("pendingActions")
-      .withIndex("by_code", (q) => q.eq("code", args.code))
-      .first();
-    if (action && action.requesterNumber === args.requesterNumber) {
-      await ctx.db.patch(action._id, {
-        status: "completed",
-        completedAt: Date.now(),
-        result: args.result,
-      });
-    }
+    await patchByCode(ctx, args.code, args.requesterNumber, {
+      status: "completed",
+      completedAt: Date.now(),
+      result: args.result,
+    });
     return { ok: true };
   },
 });
@@ -102,17 +111,11 @@ export const fail = internalMutation({
     error: v.string(),
   },
   handler: async (ctx, args) => {
-    const action = await ctx.db
-      .query("pendingActions")
-      .withIndex("by_code", (q) => q.eq("code", args.code))
-      .first();
-    if (action && action.requesterNumber === args.requesterNumber) {
-      await ctx.db.patch(action._id, {
-        status: "failed",
-        completedAt: Date.now(),
-        error: args.error,
-      });
-    }
+    await patchByCode(ctx, args.code, args.requesterNumber, {
+      status: "failed",
+      completedAt: Date.now(),
+      error: args.error,
+    });
     return { ok: true };
   },
 });

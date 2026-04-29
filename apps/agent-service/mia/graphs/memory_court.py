@@ -5,7 +5,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 
 from mia.llm import build_chat_model
-from mia.models import AdversarialRound, CourtProposal, JudgeDecision
+from mia.models import MEMORY_COURT_ACTIONS, AdversarialRound, CourtProposal, JudgeDecision
 from mia.settings import Settings
 
 
@@ -37,7 +37,7 @@ async def consolidator(state: MemoryCourtState, settings: Settings) -> dict:
                 content=(
                     "You are Mia's Memory Court Consolidator. Find low-value or duplicate memories. "
                     "Permanent memories must not be deleted. Return strict JSON array of proposals. "
-                    "Each proposal fields: memory_ids, action(delete|merge|keep|manual_review), "
+                    f"Each proposal fields: memory_ids, action({MEMORY_COURT_ACTIONS}), "
                     "proposed_content nullable, reason."
                 )
             ),
@@ -112,7 +112,7 @@ async def judge(state: MemoryCourtState, settings: Settings) -> dict:
                 content=(
                     "You are Mia's Memory Court judge. Decide final action for every proposal after "
                     "two adversarial rounds. Permanent memories must only be keep or manual_review. "
-                    "Return strict JSON array fields: memory_ids, action(delete|merge|keep|manual_review), "
+                    f"Return strict JSON array fields: memory_ids, action({MEMORY_COURT_ACTIONS}), "
                     "final_content nullable, reason."
                 )
             ),

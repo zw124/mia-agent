@@ -4,6 +4,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 MemoryTier = Literal["short_term", "long_term", "permanent"]
 MemorySegment = Literal["preferences", "facts", "tasks", "relationships", "projects", "other"]
+MemoryCourtAction = Literal["delete", "merge", "keep", "manual_review"]
+MEMORY_COURT_ACTIONS = "delete|merge|keep|manual_review"
 
 
 class SendBlueWebhook(BaseModel):
@@ -48,7 +50,7 @@ class MemoryRecord(BaseModel):
 
 class CourtProposal(BaseModel):
     memory_ids: list[str]
-    action: Literal["delete", "merge", "keep", "manual_review"]
+    action: MemoryCourtAction
     proposed_content: str | None = None
     reason: str
 
@@ -61,7 +63,7 @@ class AdversarialRound(BaseModel):
 
 class JudgeDecision(BaseModel):
     memory_ids: list[str]
-    action: Literal["delete", "merge", "keep", "manual_review"]
+    action: MemoryCourtAction
     final_content: str | None = None
     reason: str
 
