@@ -29,6 +29,7 @@ import type { ComponentType, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import type { Doc } from "../../../convex/_generated/dataModel";
 
 type Section =
   | "dashboard"
@@ -39,100 +40,15 @@ type Section =
   | "consolidation"
   | "connectors";
 
-type ThoughtLog = {
-  _id: string;
-  runId?: string;
-  node: string;
-  content: string;
-  activeAgent?: string;
-  createdAt: number;
-};
-
-type Message = {
-  _id: string;
-  direction: "inbound" | "outbound";
-  messageHandle: string;
-  content: string;
-  fromNumber?: string;
-  toNumber?: string;
-  status?: string;
-  createdAt: number;
-};
-
-type Memory = {
-  _id: string;
-  tier: "short_term" | "long_term" | "permanent";
-  segment: string;
-  status: "active" | "merged" | "deleted" | "manual_review";
-  content: string;
-  importanceScore: number;
-  decayRate: number;
-  updatedAt: number;
-};
-
-type AgentRun = {
-  _id: string;
-  runId: string;
-  messageHandle?: string;
-  activeAgent?: string;
-  status: "running" | "completed" | "failed";
-  startedAt: number;
-  completedAt?: number;
-  error?: string;
-};
-
-type AgentSpawn = {
-  _id: string;
-  runId: string;
-  messageHandle: string;
-  parentAgent: string;
-  name: string;
-  objective: string;
-  allowedTools: string[];
-  status: "planned" | "running" | "completed" | "failed" | "blocked";
-  result?: string;
-  error?: string;
-  createdAt: number;
-  updatedAt: number;
-};
-
-type CourtRun = {
-  _id: string;
-  runId: string;
-  localDate: string;
-  status: "running" | "completed" | "failed";
-  startedAt: number;
-  completedAt?: number;
-  error?: string;
-};
-
-type CourtDecision = {
-  _id: string;
-  runId: string;
-  action: "delete" | "merge" | "keep" | "manual_review";
-  reason: string;
-  memoryIds: string[];
-  createdAt: number;
-};
-
-type PendingAction = {
-  _id: string;
-  kind: string;
-  summary: string;
-  risk: "safe" | "approval_required" | "manual_only";
-  status: "pending" | "approved" | "completed" | "failed" | "expired";
-  createdAt: number;
-  expiresAt: number;
-  result?: string;
-  error?: string;
-};
-
-type WebhookEvent = {
-  _id: string;
-  messageHandle?: string;
-  ignored: boolean;
-  createdAt: number;
-};
+type ThoughtLog = Doc<"thoughtLogs">;
+type Message = Doc<"messages">;
+type Memory = Doc<"memories">;
+type AgentRun = Doc<"agentRuns">;
+type AgentSpawn = Doc<"agentSpawns">;
+type CourtRun = Doc<"memoryCourtRuns">;
+type CourtDecision = Doc<"memoryCourtDecisions">;
+type PendingAction = Doc<"pendingActions">;
+type WebhookEvent = Doc<"webhookEvents">;
 
 const navItems: { id: Section; label: string; icon: ComponentType<{ size?: number }> }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },

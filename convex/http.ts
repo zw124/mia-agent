@@ -16,194 +16,85 @@ function isAuthorized(request: Request) {
   return Boolean(expected) && request.headers.get("x-mia-internal-secret") === expected;
 }
 
-http.route({
-  path: "/internal/webhook-event",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.messages.recordWebhookEvent, body));
-  }),
-});
+function postRoute(path: string, handler: (ctx: any, body: any) => Promise<unknown>) {
+  http.route({
+    path,
+    method: "POST",
+    handler: httpAction(async (ctx, request) => {
+      if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
+      return json(await handler(ctx, await request.json()));
+    }),
+  });
+}
 
-http.route({
-  path: "/internal/inbound-message",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.messages.recordInbound, body));
-  }),
-});
+function emptyPostRoute(path: string, handler: (ctx: any) => Promise<unknown>) {
+  http.route({
+    path,
+    method: "POST",
+    handler: httpAction(async (ctx, request) => {
+      if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
+      return json(await handler(ctx));
+    }),
+  });
+}
 
-http.route({
-  path: "/internal/outbound-message",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.messages.recordOutbound, body));
-  }),
-});
-
-http.route({
-  path: "/internal/thought-log",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.thoughtLogs.record, body));
-  }),
-});
-
-http.route({
-  path: "/internal/agent-run/start",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.agentRuns.start, body));
-  }),
-});
-
-http.route({
-  path: "/internal/agent-run/complete",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.agentRuns.complete, body));
-  }),
-});
-
-http.route({
-  path: "/internal/agent-run/fail",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.agentRuns.fail, body));
-  }),
-});
-
-http.route({
-  path: "/internal/agent-spawn",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.agentSpawns.record, body));
-  }),
-});
-
-http.route({
-  path: "/internal/agent-spawn/status",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.agentSpawns.updateStatus, body));
-  }),
-});
-
-http.route({
-  path: "/internal/memory",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.memories.upsert, body));
-  }),
-});
-
-http.route({
-  path: "/internal/memories/relevant",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runQuery(internal.memories.relevant, body));
-  }),
-});
-
-http.route({
-  path: "/internal/calendar/holds",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.calendar.createHold, body));
-  }),
-});
-
-http.route({
-  path: "/internal/calendar/day",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runQuery(internal.calendar.listForDay, body));
-  }),
-});
-
-http.route({
-  path: "/internal/pending-actions/create",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.pendingActions.create, body));
-  }),
-});
-
-http.route({
-  path: "/internal/pending-actions/approve",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.pendingActions.approveLatest, body));
-  }),
-});
-
-http.route({
-  path: "/internal/pending-actions/complete",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.pendingActions.complete, body));
-  }),
-});
-
-http.route({
-  path: "/internal/pending-actions/fail",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.pendingActions.fail, body));
-  }),
-});
-
-http.route({
-  path: "/internal/memory-court/candidates",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    return json(await ctx.runQuery(internal.memories.courtCandidates, {}));
-  }),
-});
-
-http.route({
-  path: "/internal/memory-court/apply",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.memoryCourt.applyDecisions, body));
-  }),
-});
+postRoute("/internal/webhook-event", (ctx, body) =>
+  ctx.runMutation(internal.messages.recordWebhookEvent, body),
+);
+postRoute("/internal/inbound-message", (ctx, body) =>
+  ctx.runMutation(internal.messages.recordInbound, body),
+);
+postRoute("/internal/outbound-message", (ctx, body) =>
+  ctx.runMutation(internal.messages.recordOutbound, body),
+);
+postRoute("/internal/thought-log", (ctx, body) =>
+  ctx.runMutation(internal.thoughtLogs.record, body),
+);
+postRoute("/internal/agent-run/start", (ctx, body) =>
+  ctx.runMutation(internal.agentRuns.start, body),
+);
+postRoute("/internal/agent-run/complete", (ctx, body) =>
+  ctx.runMutation(internal.agentRuns.complete, body),
+);
+postRoute("/internal/agent-run/fail", (ctx, body) =>
+  ctx.runMutation(internal.agentRuns.fail, body),
+);
+postRoute("/internal/agent-spawn", (ctx, body) =>
+  ctx.runMutation(internal.agentSpawns.record, body),
+);
+postRoute("/internal/agent-spawn/status", (ctx, body) =>
+  ctx.runMutation(internal.agentSpawns.updateStatus, body),
+);
+postRoute("/internal/memory", (ctx, body) =>
+  ctx.runMutation(internal.memories.upsert, body),
+);
+postRoute("/internal/memories/relevant", (ctx, body) =>
+  ctx.runQuery(internal.memories.relevant, body),
+);
+postRoute("/internal/calendar/holds", (ctx, body) =>
+  ctx.runMutation(internal.calendar.createHold, body),
+);
+postRoute("/internal/calendar/day", (ctx, body) =>
+  ctx.runQuery(internal.calendar.listForDay, body),
+);
+postRoute("/internal/pending-actions/create", (ctx, body) =>
+  ctx.runMutation(internal.pendingActions.create, body),
+);
+postRoute("/internal/pending-actions/approve", (ctx, body) =>
+  ctx.runMutation(internal.pendingActions.approveLatest, body),
+);
+postRoute("/internal/pending-actions/complete", (ctx, body) =>
+  ctx.runMutation(internal.pendingActions.complete, body),
+);
+postRoute("/internal/pending-actions/fail", (ctx, body) =>
+  ctx.runMutation(internal.pendingActions.fail, body),
+);
+emptyPostRoute("/internal/memory-court/candidates", (ctx) =>
+  ctx.runQuery(internal.memories.courtCandidates, {}),
+);
+postRoute("/internal/memory-court/apply", (ctx, body) =>
+  ctx.runMutation(internal.memoryCourt.applyDecisions, body),
+);
 
 http.route({
   path: "/internal/heartbeat/repair",
@@ -222,14 +113,8 @@ http.route({
   }),
 });
 
-http.route({
-  path: "/internal/heartbeat/record",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
-    const body = await request.json();
-    return json(await ctx.runMutation(internal.systemHealth.recordHeartbeat, body));
-  }),
-});
+postRoute("/internal/heartbeat/record", (ctx, body) =>
+  ctx.runMutation(internal.systemHealth.recordHeartbeat, body),
+);
 
 export default http;

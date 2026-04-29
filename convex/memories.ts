@@ -1,14 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "./_generated/server";
-
-const segment = v.union(
-  v.literal("preferences"),
-  v.literal("facts"),
-  v.literal("tasks"),
-  v.literal("relationships"),
-  v.literal("projects"),
-  v.literal("other"),
-);
+import { memorySegment } from "./validators";
 
 function tierForImportance(score: number) {
   if (score >= 0.9) return "permanent" as const;
@@ -25,7 +17,7 @@ function decayForImportance(score: number) {
 export const upsert = internalMutation({
   args: {
     content: v.string(),
-    segment,
+    segment: memorySegment,
     sourceMessageHandle: v.string(),
     importanceScore: v.number(),
   },

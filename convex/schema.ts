@@ -1,27 +1,17 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-
-const memoryTier = v.union(
-  v.literal("short_term"),
-  v.literal("long_term"),
-  v.literal("permanent"),
-);
-
-const memorySegment = v.union(
-  v.literal("preferences"),
-  v.literal("facts"),
-  v.literal("tasks"),
-  v.literal("relationships"),
-  v.literal("projects"),
-  v.literal("other"),
-);
-
-const memoryStatus = v.union(
-  v.literal("active"),
-  v.literal("merged"),
-  v.literal("deleted"),
-  v.literal("manual_review"),
-);
+import {
+  agentRunStatus,
+  agentSpawnStatus,
+  calendarHoldStatus,
+  courtDecisionAction,
+  heartbeatStatus,
+  memorySegment,
+  memoryStatus,
+  memoryTier,
+  pendingActionRisk,
+  pendingActionStatus,
+} from "./validators";
 
 export default defineSchema({
   messages: defineTable({
@@ -65,7 +55,7 @@ export default defineSchema({
     runId: v.string(),
     messageHandle: v.optional(v.string()),
     activeAgent: v.optional(v.string()),
-    status: v.union(v.literal("running"), v.literal("completed"), v.literal("failed")),
+    status: agentRunStatus,
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
     error: v.optional(v.string()),
@@ -80,13 +70,7 @@ export default defineSchema({
     name: v.string(),
     objective: v.string(),
     allowedTools: v.array(v.string()),
-    status: v.union(
-      v.literal("planned"),
-      v.literal("running"),
-      v.literal("completed"),
-      v.literal("failed"),
-      v.literal("blocked"),
-    ),
+    status: agentSpawnStatus,
     result: v.optional(v.string()),
     error: v.optional(v.string()),
     createdAt: v.number(),
@@ -100,7 +84,7 @@ export default defineSchema({
     day: v.string(),
     time: v.string(),
     sourceMessageHandle: v.string(),
-    status: v.union(v.literal("tentative"), v.literal("confirmed"), v.literal("cancelled")),
+    status: calendarHoldStatus,
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -115,14 +99,8 @@ export default defineSchema({
     kind: v.string(),
     summary: v.string(),
     payload: v.any(),
-    risk: v.union(v.literal("safe"), v.literal("approval_required"), v.literal("manual_only")),
-    status: v.union(
-      v.literal("pending"),
-      v.literal("approved"),
-      v.literal("completed"),
-      v.literal("failed"),
-      v.literal("expired"),
-    ),
+    risk: pendingActionRisk,
+    status: pendingActionStatus,
     createdAt: v.number(),
     expiresAt: v.number(),
     approvedAt: v.optional(v.number()),
@@ -154,7 +132,7 @@ export default defineSchema({
   memoryCourtRuns: defineTable({
     runId: v.string(),
     localDate: v.string(),
-    status: v.union(v.literal("running"), v.literal("completed"), v.literal("failed")),
+    status: agentRunStatus,
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
     error: v.optional(v.string()),
@@ -166,12 +144,7 @@ export default defineSchema({
   memoryCourtDecisions: defineTable({
     runId: v.string(),
     memoryIds: v.array(v.string()),
-    action: v.union(
-      v.literal("delete"),
-      v.literal("merge"),
-      v.literal("keep"),
-      v.literal("manual_review"),
-    ),
+    action: courtDecisionAction,
     finalContent: v.optional(v.string()),
     reason: v.string(),
     proposal: v.optional(v.any()),
@@ -183,7 +156,7 @@ export default defineSchema({
 
   systemHeartbeats: defineTable({
     source: v.string(),
-    status: v.union(v.literal("ok"), v.literal("degraded"), v.literal("failed")),
+    status: heartbeatStatus,
     checks: v.any(),
     repairs: v.array(v.string()),
     createdAt: v.number(),

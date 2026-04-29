@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, query } from "./_generated/server";
+import { agentSpawnStatus, nullableString } from "./validators";
 
 export const record = internalMutation({
   args: {
@@ -9,15 +10,7 @@ export const record = internalMutation({
     name: v.string(),
     objective: v.string(),
     allowedTools: v.array(v.string()),
-    status: v.optional(
-      v.union(
-        v.literal("planned"),
-        v.literal("running"),
-        v.literal("completed"),
-        v.literal("failed"),
-        v.literal("blocked"),
-      ),
-    ),
+    status: v.optional(agentSpawnStatus),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -40,15 +33,9 @@ export const updateStatus = internalMutation({
   args: {
     runId: v.string(),
     name: v.string(),
-    status: v.union(
-      v.literal("planned"),
-      v.literal("running"),
-      v.literal("completed"),
-      v.literal("failed"),
-      v.literal("blocked"),
-    ),
-    result: v.optional(v.union(v.string(), v.null())),
-    error: v.optional(v.union(v.string(), v.null())),
+    status: agentSpawnStatus,
+    result: v.optional(nullableString),
+    error: v.optional(nullableString),
   },
   handler: async (ctx, args) => {
     const spawn = await ctx.db

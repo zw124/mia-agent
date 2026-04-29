@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery, query } from "./_generated/server";
+import { courtDecisionAction, nullableString } from "./validators";
 
 function newYorkLocalParts(now: Date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -130,13 +131,8 @@ export const applyDecisions = internalMutation({
     judgeDecisions: v.array(
       v.object({
         memory_ids: v.array(v.string()),
-        action: v.union(
-          v.literal("delete"),
-          v.literal("merge"),
-          v.literal("keep"),
-          v.literal("manual_review"),
-        ),
-        final_content: v.optional(v.union(v.string(), v.null())),
+        action: courtDecisionAction,
+        final_content: v.optional(nullableString),
         reason: v.string(),
       }),
     ),

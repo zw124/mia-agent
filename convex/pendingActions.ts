@@ -1,17 +1,16 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, query } from "./_generated/server";
-
-const risk = v.union(v.literal("safe"), v.literal("approval_required"), v.literal("manual_only"));
+import { nullableString, pendingActionRisk } from "./validators";
 
 export const create = internalMutation({
   args: {
     requesterNumber: v.string(),
     messageHandle: v.string(),
-    runId: v.optional(v.union(v.string(), v.null())),
+    runId: v.optional(nullableString),
     kind: v.string(),
     summary: v.string(),
     payload: v.any(),
-    risk,
+    risk: pendingActionRisk,
   },
   handler: async (ctx, args) => {
     const now = Date.now();

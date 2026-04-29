@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, query } from "./_generated/server";
-
-const heartbeatStatus = v.union(v.literal("ok"), v.literal("degraded"), v.literal("failed"));
+import { heartbeatStatus } from "./validators";
 
 export const recordHeartbeat = internalMutation({
   args: {

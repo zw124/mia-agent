@@ -1,13 +1,14 @@
 import { v } from "convex/values";
 import { internalMutation, query } from "./_generated/server";
+import { nullableString } from "./validators";
 
 export const record = internalMutation({
   args: {
-    messageHandle: v.optional(v.union(v.string(), v.null())),
-    runId: v.optional(v.union(v.string(), v.null())),
+    messageHandle: v.optional(nullableString),
+    runId: v.optional(nullableString),
     node: v.string(),
     content: v.string(),
-    activeAgent: v.optional(v.union(v.string(), v.null())),
+    activeAgent: v.optional(nullableString),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("thoughtLogs", {
