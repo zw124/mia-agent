@@ -1,5 +1,5 @@
 [project]
-name = "mia-agent-service"
+name = "mia-agent"
 version = "0.1.0"
 description = "FastAPI and LangGraph service for Mia personal AI agent"
 readme = "README.md"

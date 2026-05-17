@@ -48,7 +48,7 @@ mia-agent serve
 After PyPI publishing:
 
 ```bash
-pipx install mia-agent-service
+pipx install mia-agent
 mia-agent onboard
 mia-agent serve
 ```
@@ -361,7 +361,7 @@ The Python package lives in `apps/agent-service` and publishes the `mia-agent` C
 Package name:
 
 ```text
-mia-agent-service
+mia-agent
 ```
 
 Local build check:
@@ -384,7 +384,7 @@ Recommended publishing path is PyPI Trusted Publishing, not a long-lived API tok
 Owner/repository: zw124/mia-agent
 Workflow name: publish-pypi.yml
 Environment name: pypi
-Package name: mia-agent-service
+Package name: mia-agent
 ```
 
 Then publish by creating a GitHub Release or manually running the workflow.

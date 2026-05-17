@@ -5,7 +5,7 @@ FastAPI service and CLI for Mia Personal AI Agent.
 Install:
 
 ```bash
-pipx install mia-agent-service
+pipx install mia-agent
 ```
 
 Run terminal onboarding:
