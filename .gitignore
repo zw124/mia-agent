@@ -25,6 +25,8 @@ apps/**/.env.local
 *.log
 .mia/logs/
 .mia/*.json
+.mia/
+*.tsbuildinfo
 
 # local third-party reference checkouts
 openclaw/
