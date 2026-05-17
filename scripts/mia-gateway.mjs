@@ -93,7 +93,9 @@ const fileEnv = {
   ...loadEnvFile(path.join(root, "apps", "dashboard", ".env.local")),
 };
 
-const runtimeEnv = { ...fileEnv, ...process.env, PATH: basePath };
+// Prefer project env files over stale exported shell variables. This keeps reruns predictable
+// after the setup page or manual .env.local edits change Convex/tunnel settings.
+const runtimeEnv = { ...process.env, ...fileEnv, PATH: basePath };
 const configuredAgentServiceUrl = String(runtimeEnv.AGENT_SERVICE_URL ?? "").replace(/\/$/, "");
 const requestedTunnel = getArgValue("--tunnel", args.has("--ngrok") ? "ngrok" : "");
 const tunnel =
@@ -175,6 +177,11 @@ function spawnService({ name, command, args: serviceArgs, cwd = root, env = {} }
     log.end();
     logLine("gateway", `${name} ${line}`);
   });
+}
+
+function rememberService(spec) {
+  managedServices.set(spec.name, spec);
+  return spec;
 }
 
 function localtunnelArgs() {
@@ -418,55 +425,57 @@ async function start() {
   logLine("gateway", `logs ${logsDir}\n`);
 
   if (!args.has("--no-convex")) {
-    spawnService({
+    spawnService(rememberService({
       name: "convex",
       command: "npx",
       args: ["convex", "dev"],
-    });
+    }));
   }
 
   if (!args.has("--no-dashboard")) {
+    const dashboardSpec = rememberService({
+      name: "dashboard",
+      command: "npx",
+      args: ["next", "dev", "apps/dashboard", "-p", String(dashboardPort)],
+    });
     if (await isPortOpen(dashboardPort)) {
       logLine("dashboard", `port ${dashboardPort} already listening; not starting duplicate\n`);
     } else {
-      spawnService({
-        name: "dashboard",
-        command: "npx",
-        args: ["next", "dev", "apps/dashboard", "-p", String(dashboardPort)],
-      });
+      spawnService(dashboardSpec);
     }
   }
 
   if (!args.has("--no-agent")) {
+    const uvicorn = path.join(root, ".venv", "bin", "uvicorn");
+    const agentSpec = rememberService({
+      name: "agent",
+      command: existsSync(uvicorn) ? uvicorn : "uvicorn",
+      args: ["mia.main:app", "--reload", "--port", String(agentPort)],
+      cwd: path.join(root, "apps", "agent-service"),
+    });
     if (await isPortOpen(agentPort)) {
       logLine("agent", `port ${agentPort} already listening; not starting duplicate\n`);
     } else {
-      const uvicorn = path.join(root, ".venv", "bin", "uvicorn");
-      spawnService({
-        name: "agent",
-        command: existsSync(uvicorn) ? uvicorn : "uvicorn",
-        args: ["mia.main:app", "--reload", "--port", String(agentPort)],
-        cwd: path.join(root, "apps", "agent-service"),
-      });
+      spawnService(agentSpec);
     }
   }
 
   if (tunnel === "ngrok") {
     if (await commandExists("ngrok")) {
-      spawnService({
+      spawnService(rememberService({
         name: "ngrok",
         command: "ngrok",
         args: ["http", String(agentPort)],
-      });
+      }));
     } else {
       logLine("ngrok", "ngrok is not installed or not on PATH; tunnel skipped\n");
     }
   } else if (tunnel === "localtunnel") {
-    spawnService({
+    spawnService(rememberService({
       name: "localtunnel",
       command: "npx",
       args: localtunnelArgs(),
-    });
+    }));
   }
 
   logLine("gateway", `dashboard http://localhost:${dashboardPort}\n`);

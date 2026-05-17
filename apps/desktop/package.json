@@ -1,0 +1,43 @@
+{
+  "name": "@mia/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/main.mjs",
+  "scripts": {
+    "dev": "electron .",
+    "package": "electron-builder install-app-deps && electron-builder --mac --win --linux"
+  },
+  "dependencies": {
+    "electron": "35.0.0",
+    "electron-builder": "26.8.1"
+  },
+  "build": {
+    "appId": "app.mia.desktop",
+    "productName": "Mia",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility"
+    }
+  }
+}

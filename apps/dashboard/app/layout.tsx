@@ -3,8 +3,8 @@ import "./styles.css";
 import { ConvexClientProvider } from "../components/convex-client-provider";
 
 export const metadata: Metadata = {
-  title: "Mia Debug Dashboard",
-  description: "Realtime operations dashboard for Mia personal AI agent",
+  title: "Mia",
+  description: "Personal iMessage AI agent — web and desktop control center",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

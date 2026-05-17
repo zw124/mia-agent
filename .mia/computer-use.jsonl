@@ -1,0 +1,26 @@
+{"goal": "Open the browser and submit a form.", "message_handle": "msg-1", "risk": "safe", "run_id": "run-1", "timestamp": 1779052340.7312582, "tool": "computer_plan"}
+{"action": "type_text", "message_handle": "msg-1", "payload": {"text": "hello"}, "risk": "medium", "run_id": "run-1", "timestamp": 1779052340.778925, "tool": "computer_action_preview"}
+{"goal": "Open the browser and submit a form.", "message_handle": "msg-1", "risk": "safe", "run_id": "run-1", "timestamp": 1779052375.835582, "tool": "computer_plan"}
+{"action": "type_text", "message_handle": "msg-1", "payload": {"text": "hello"}, "risk": "medium", "run_id": "run-1", "timestamp": 1779052375.889652, "tool": "computer_action_preview"}
+{"goal": "Open the browser and submit a form.", "message_handle": "msg-1", "risk": "safe", "run_id": "run-1", "timestamp": 1779052388.630006, "tool": "computer_plan"}
+{"action": "type_text", "message_handle": "msg-1", "payload": {"text": "hello"}, "risk": "medium", "run_id": "run-1", "timestamp": 1779052388.67268, "tool": "computer_action_preview"}
+{"goal": "Open the browser and submit a form.", "message_handle": "msg-1", "risk": "safe", "run_id": "run-1", "timestamp": 1779055340.971738, "tool": "computer_plan"}
+{"action": "type_text", "message_handle": "msg-1", "payload": {"text": "hello"}, "risk": "medium", "run_id": "run-1", "timestamp": 1779055341.0171509, "tool": "computer_action_preview"}
+{"goal": "Open the browser and submit a form.", "message_handle": "msg-1", "risk": "safe", "run_id": "run-1", "timestamp": 1779056144.351722, "tool": "computer_plan"}
+{"action": "type_text", "message_handle": "msg-1", "payload": {"text": "hello"}, "risk": "medium", "run_id": "run-1", "timestamp": 1779056144.399766, "tool": "computer_action_preview"}
+{"goal": "Open the browser and submit a form.", "message_handle": "msg-1", "risk": "safe", "run_id": "run-1", "timestamp": 1779056520.31376, "tool": "computer_plan"}
+{"action": "type_text", "message_handle": "msg-1", "payload": {"text": "hello"}, "risk": "medium", "run_id": "run-1", "timestamp": 1779056520.3660831, "tool": "computer_action_preview"}
+{"goal": "Open the browser and submit a form.", "message_handle": "msg-1", "risk": "safe", "run_id": "run-1", "timestamp": 1779056557.724877, "tool": "computer_plan"}
+{"action": "type_text", "message_handle": "msg-1", "payload": {"text": "hello"}, "risk": "medium", "run_id": "run-1", "timestamp": 1779056557.775291, "tool": "computer_action_preview"}
+{"goal": "Open the browser and submit a form.", "message_handle": "msg-1", "risk": "safe", "run_id": "run-1", "timestamp": 1779058010.194324, "tool": "computer_plan"}
+{"action": "type_text", "message_handle": "msg-1", "payload": {"text": "hello"}, "risk": "medium", "run_id": "run-1", "timestamp": 1779058010.2387998, "tool": "computer_action_preview"}
+{"goal": "Open the browser and submit a form.", "message_handle": "msg-1", "risk": "safe", "run_id": "run-1", "timestamp": 1779058816.6146402, "tool": "computer_plan"}
+{"action": "type_text", "message_handle": "msg-1", "payload": {"text": "hello"}, "risk": "medium", "run_id": "run-1", "timestamp": 1779058816.6683562, "tool": "computer_action_preview"}
+{"goal": "Open the browser and submit a form.", "message_handle": "msg-1", "risk": "safe", "run_id": "run-1", "timestamp": 1779058909.356698, "tool": "computer_plan"}
+{"action": "type_text", "message_handle": "msg-1", "payload": {"text": "hello"}, "risk": "medium", "run_id": "run-1", "timestamp": 1779058909.409628, "tool": "computer_action_preview"}
+{"goal": "Open the browser and submit a form.", "message_handle": "msg-1", "risk": "safe", "run_id": "run-1", "timestamp": 1779059476.447766, "tool": "computer_plan"}
+{"action": "type_text", "message_handle": "msg-1", "payload": {"text": "hello"}, "risk": "medium", "run_id": "run-1", "timestamp": 1779059476.494441, "tool": "computer_action_preview"}
+{"goal": "Open the browser and submit a form.", "message_handle": "msg-1", "risk": "safe", "run_id": "run-1", "timestamp": 1779059817.394998, "tool": "computer_plan"}
+{"action": "type_text", "message_handle": "msg-1", "payload": {"text": "hello"}, "risk": "medium", "run_id": "run-1", "timestamp": 1779059817.4397938, "tool": "computer_action_preview"}
+{"goal": "Open the browser and submit a form.", "message_handle": "msg-1", "risk": "safe", "run_id": "run-1", "timestamp": 1779060002.9725142, "tool": "computer_plan"}
+{"action": "type_text", "message_handle": "msg-1", "payload": {"text": "hello"}, "risk": "medium", "run_id": "run-1", "timestamp": 1779060003.022124, "tool": "computer_action_preview"}

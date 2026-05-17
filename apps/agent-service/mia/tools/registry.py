@@ -3,6 +3,7 @@ from langchain_core.tools import BaseTool
 from mia.integrations.convex import ConvexClient
 from mia.tools.calendar import build_calendar_tools
 from mia.tools.coding import CODING_TOOLS
+from mia.tools.composio import build_composio_tools
 from mia.tools.computer import build_computer_tools
 from mia.tools.search import build_search_tools
 
@@ -27,10 +28,15 @@ AVAILABLE_TOOL_NAMES = {
     "get_frontmost_app",
     "list_running_apps",
     "screenshot_desktop",
+    "computer_observe",
+    "computer_plan",
+    "computer_action_preview",
     "read_file",
     "list_directory",
     "file_info",
     "search_files",
+    "workspace_status",
+    "workspace_diff",
     "write_file",
     "delete_file",
     "append_file",
@@ -75,6 +81,13 @@ AVAILABLE_TOOL_NAMES = {
     "extract_pdf_text",
     "pdf",
     "web_search",
+    "composio_search",
+    "composio_whoami",
+    "composio_link",
+    "composio_schema",
+    "composio_dry_run",
+    "composio_execute",
+    "composio_run",
 }
 
 
@@ -85,6 +98,7 @@ def tool_registry(
     requester_number: str = "",
     run_id: str | None = None,
     searxng_base_url: str = "",
+    composio_enabled: bool = False,
 ) -> dict[str, BaseTool]:
     tools: list[BaseTool] = [
         *build_calendar_tools(convex, source_message_handle=source_message_handle),
@@ -96,6 +110,12 @@ def tool_registry(
             run_id=run_id,
         ),
         *build_search_tools(searxng_base_url=searxng_base_url),
+        *build_composio_tools(
+            convex,
+            requester_number=requester_number,
+            message_handle=source_message_handle,
+            enabled=composio_enabled,
+        ),
     ]
     return {tool.name: tool for tool in tools}
 
@@ -122,10 +142,15 @@ def public_tool_descriptions() -> str:
             "- get_frontmost_app: inspect the currently active macOS app; owner-only",
             "- list_running_apps: list visible running macOS apps; owner-only",
             "- screenshot_desktop: capture the Mac desktop to a local PNG; owner-only",
+            "- computer_observe: high-quality computer-use observation with screenshot, active app, and app list; owner-only",
+            "- computer_plan: create a safe computer-use plan with checkpoints before acting",
+            "- computer_action_preview: preview risk and approval requirement for a proposed computer action",
             "- read_file: read a local text file",
             "- list_directory: list local files and directories under a path; owner-only",
             "- file_info: inspect local file or directory metadata; owner-only",
             "- search_files: search local file paths by name under a directory; owner-only",
+            "- workspace_status: show concise git workspace status; owner-only",
+            "- workspace_diff: show current git diff for review; owner-only",
             "- write_file: request approval to write a local file",
             "- delete_file: request approval to delete a local file",
             "- append_file: request approval to append text to a local file",
@@ -169,7 +194,14 @@ def public_tool_descriptions() -> str:
             "- image: OpenClaw-compatible alias for image_info",
             "- extract_pdf_text: extract text from a local PDF when possible; owner-only",
             "- pdf: OpenClaw-compatible alias for extract_pdf_text",
-            "- web_search: search the web using SearXNG",
+            "- web_search: search the web using SearXNG or DuckDuckGo fallback",
+            "- composio_search: search Composio tool slugs by natural language",
+            "- composio_whoami: check Composio CLI authentication status",
+            "- composio_link: connect a Composio toolkit account",
+            "- composio_schema: inspect a Composio tool input schema",
+            "- composio_dry_run: validate a Composio tool payload without performing the action",
+            "- composio_execute: request approval to execute a Composio tool with JSON payload",
+            "- composio_run: request approval to run a multi-step Composio JavaScript workflow",
         ]
     )
 
@@ -180,10 +212,13 @@ OWNER_ONLY_TOOLS = {
     "get_frontmost_app",
     "list_running_apps",
     "screenshot_desktop",
+    "computer_observe",
     "read_file",
     "list_directory",
     "file_info",
     "search_files",
+    "workspace_status",
+    "workspace_diff",
     "write_file",
     "delete_file",
     "append_file",
@@ -230,4 +265,11 @@ OWNER_ONLY_TOOLS = {
     "image",
     "extract_pdf_text",
     "pdf",
+    "composio_search",
+    "composio_whoami",
+    "composio_link",
+    "composio_schema",
+    "composio_dry_run",
+    "composio_execute",
+    "composio_run",
 }

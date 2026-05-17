@@ -13,12 +13,7 @@ export function ConvexClientProvider({ children }: { children: React.ReactNode }
   }, []);
 
   if (!convex) {
-    return (
-      <main className="missing-config">
-        <h1>Mia Dashboard</h1>
-        <p>Set NEXT_PUBLIC_CONVEX_URL to connect realtime data.</p>
-      </main>
-    );
+    return children;
   }
 
   return <ConvexProvider client={convex}>{children}</ConvexProvider>;

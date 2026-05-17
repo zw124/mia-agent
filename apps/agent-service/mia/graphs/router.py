@@ -3,15 +3,23 @@ from typing import Any, Literal, TypedDict
 
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import BaseTool
-from langgraph.graph import END, START, StateGraph
 
 from mia.integrations.convex import ConvexClient
+from mia.graphs.coding_orchestra import run_coding_orchestra
+from mia.graphs.design_orchestra import run_design_orchestra
 from mia.llm import build_chat_model
 from mia.settings import Settings
-from mia.tools.registry import AVAILABLE_TOOL_NAMES, OWNER_ONLY_TOOLS, public_tool_descriptions, tool_registry
+from mia.tools.registry import (
+    AVAILABLE_TOOL_NAMES,
+    OWNER_ONLY_TOOLS,
+    public_tool_descriptions,
+    tool_registry,
+)
+from mia.user_profile import load_user_profile
 
-RouteName = Literal["direct_reply", "dynamic_sub_agent", "memory_update"]
-VALID_ROUTES = {"direct_reply", "dynamic_sub_agent", "memory_update"}
+ExecutionMode = Literal["fast_reply", "memory_update", "tool_task", "coding_orchestra", "design_orchestra"]
+TaskComplexity = Literal["simple", "multi_step"]
+OrchestrationDepth = Literal["brief", "standard", "deep"]
 
 
 class MiaRouterState(TypedDict):
@@ -21,7 +29,7 @@ class MiaRouterState(TypedDict):
     from_number: str
     sendblue_number: str | None
     message_handle: str
-    route: RouteName
+    route: str
     sub_agent_name: str
     sub_agent_objective: str
     allowed_tools: list[str]
@@ -30,33 +38,84 @@ class MiaRouterState(TypedDict):
     thoughts: list[str]
 
 
-ROUTER_SYSTEM = """You are Mia's parent router.
-You cannot call tools and cannot solve specialist tasks.
-Classify the user's iMessage into exactly one route:
-- direct_reply: normal conversation or simple answer
-- dynamic_sub_agent: a task needs tools or a specialist worker
-- memory_update: durable facts or preferences Mia should remember
-When route is dynamic_sub_agent, create a sub-agent specification but do not execute it.
+class MessageDecision(TypedDict):
+    mode: ExecutionMode
+    reason: str
+    reply_style: str
+    should_write_memory: bool
+    memory_content: str
+    memory_segment: str
+    memory_importance: float
+    task_complexity: TaskComplexity
+    task_name: str
+    task_objective: str
+    allowed_tools: list[str]
+    orchestration_depth: OrchestrationDepth
+
+
+DECISION_SYSTEM = """You are Mia's message orchestrator.
+Decide whether the incoming iMessage should use:
+- fast_reply: direct conversational answer with no tool execution
+- memory_update: store a durable memory and send a short acknowledgement
+- coding_orchestra: bounded specialist routing for programming, debugging, code review, architecture, or agent-design work
+- design_orchestra: bounded design-specialist routing for product UI, UX, websites, dashboards, visual systems, and design critique
+- tool_task: create a tool-using worker task
+
+Rules:
+- Prefer fast_reply by default.
+- Use memory_update only when the main user intent is to tell Mia a durable preference, fact, task, relationship, or project detail worth storing.
+- Use coding_orchestra for software engineering work that benefits from scout/plan/build/verify/review thinking but does not yet require direct external tool execution.
+- Use design_orchestra for UI/UX, product pages, landing pages, dashboards, chat interfaces, setup flows, design systems, visual polish, or design critique that benefits from design taste/context.
+- Use tool_task only when the user is clearly asking for an external action, structured retrieval, file/computer operation, search, or another tool-dependent task.
+- Do not escalate simple questions into tool_task.
+- Do not use coding_orchestra for casual chat, scheduling, memory-only updates, or non-technical questions.
+- Do not use design_orchestra for casual visual opinions if a short direct answer is enough.
+- For computer-use requests, prefer a staged tool_task with computer_plan and computer_observe before click_screen/type_text/press_key unless the user asked for one obvious atomic action.
+- For tool_task, choose the minimal allowed_tools needed.
+- orchestration_depth controls coding_orchestra/design_orchestra cost:
+  - brief: answer or design through the smallest specialist path
+  - standard: enough phases for useful quality without slow full review
+  - deep: full specialist pass only when the request is high-stakes, broad, production-grade, ambiguous, or explicitly asks for exhaustive work
+- Decide orchestration_depth from intent, risk, ambiguity, and expected output quality. Do not rely only on keywords.
+- reply_style should describe how the final reply should sound for fast_reply.
+
 Available tool names:
 {tools}
+
 Return strict JSON only:
-{{"route":"...", "reason":"...", "sub_agent_name":"...", "sub_agent_objective":"...", "allowed_tools":["..."]}}."""
+{{
+  "mode":"fast_reply|memory_update|tool_task|coding_orchestra|design_orchestra",
+  "reason":"...",
+  "reply_style":"...",
+  "should_write_memory":true,
+  "memory_content":"...",
+  "memory_segment":"preferences|facts|tasks|relationships|projects|other",
+  "memory_importance":0.0,
+  "task_complexity":"simple|multi_step",
+  "task_name":"...",
+  "task_objective":"...",
+  "allowed_tools":["..."],
+  "orchestration_depth":"brief|standard|deep"
+}}"""
 
 
-ROUTER_REPAIR_SYSTEM = """You repair Mia parent-router output.
-Do not answer the user and do not execute the task.
-Return strict JSON only with this schema:
-{"route":"direct_reply|dynamic_sub_agent|memory_update","reason":"...","sub_agent_name":"...","sub_agent_objective":"...","allowed_tools":["..."]}
-Only use tool names from the provided available tools.
-For dynamic_sub_agent, allowed_tools must be non-empty and sub_agent_objective must describe the concrete delegated task."""
-
-
-class RouterDecision(TypedDict):
-    route: RouteName
-    reason: str
-    sub_agent_name: str
-    sub_agent_objective: str
-    allowed_tools: list[str]
+DECISION_REPAIR_SYSTEM = """You repair Mia orchestrator output.
+Return strict JSON only using this schema:
+{
+  "mode":"fast_reply|memory_update|tool_task|coding_orchestra|design_orchestra",
+  "reason":"...",
+  "reply_style":"...",
+  "should_write_memory":true,
+  "memory_content":"...",
+  "memory_segment":"preferences|facts|tasks|relationships|projects|other",
+  "memory_importance":0.0,
+  "task_complexity":"simple|multi_step",
+  "task_name":"...",
+  "task_objective":"...",
+  "allowed_tools":["..."],
+  "orchestration_depth":"brief|standard|deep"
+}
+Only use listed tool names. Prefer fast_reply unless coding_orchestra, design_orchestra, or tool_task is clearly required."""
 
 
 def memory_context(state: MiaRouterState) -> str:
@@ -69,7 +128,7 @@ def memory_context(state: MiaRouterState) -> str:
     )
 
 
-def _load_router_json(content: Any) -> dict[str, Any]:
+def _load_json(content: Any) -> dict[str, Any]:
     text = str(content).strip()
     if text.startswith("```"):
         lines = text.splitlines()
@@ -78,208 +137,269 @@ def _load_router_json(content: Any) -> dict[str, Any]:
     return json.loads(text)
 
 
-def _validate_router_decision(parsed: dict[str, Any]) -> RouterDecision:
-    route = str(parsed.get("route", "")).strip()
-    if route not in VALID_ROUTES:
-        raise ValueError(f"invalid route: {route}")
+def _clamp_importance(value: Any, fallback: float = 0.6) -> float:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        numeric = fallback
+    return max(0.0, min(1.0, numeric))
+
+
+def _normalize_tools(raw_tools: Any) -> list[str]:
+    if not isinstance(raw_tools, list):
+        raise ValueError("allowed_tools must be a list")
+    normalized: list[str] = []
+    for tool in raw_tools:
+        name = str(tool).strip()
+        if not name:
+            continue
+        if name not in AVAILABLE_TOOL_NAMES:
+            raise ValueError(f"unknown tool: {name}")
+        if name not in normalized:
+            normalized.append(name)
+    return normalized
+
+
+def _validate_decision(parsed: dict[str, Any]) -> MessageDecision:
+    mode = str(parsed.get("mode", "")).strip()
+    if mode not in {"fast_reply", "memory_update", "tool_task", "coding_orchestra", "design_orchestra"}:
+        raise ValueError(f"invalid mode: {mode}")
 
     reason = str(parsed.get("reason") or "classified").strip()
-    allowed_tools = parsed.get("allowed_tools") or []
-    if not isinstance(allowed_tools, list):
-        raise ValueError("allowed_tools must be a list")
+    reply_style = str(parsed.get("reply_style") or "Reply briefly and clearly.").strip()
+    should_write_memory = bool(parsed.get("should_write_memory", False))
+    memory_segment = str(parsed.get("memory_segment") or "other").strip()
+    if memory_segment not in {"preferences", "facts", "tasks", "relationships", "projects", "other"}:
+        memory_segment = "other"
+    memory_content = str(parsed.get("memory_content") or "").strip()
+    memory_importance = _clamp_importance(parsed.get("memory_importance"), 0.6)
+    task_complexity = str(parsed.get("task_complexity") or "simple").strip()
+    if task_complexity not in {"simple", "multi_step"}:
+        task_complexity = "simple"
+    task_name = str(parsed.get("task_name") or "").strip()
+    task_objective = str(parsed.get("task_objective") or "").strip()
+    allowed_tools = _normalize_tools(parsed.get("allowed_tools") or [])
+    orchestration_depth = str(parsed.get("orchestration_depth") or "standard").strip()
+    if orchestration_depth not in {"brief", "standard", "deep"}:
+        orchestration_depth = "standard"
 
-    normalized_tools: list[str] = []
-    for tool in allowed_tools:
-        tool_name = str(tool).strip()
-        if not tool_name:
-            continue
-        if tool_name not in AVAILABLE_TOOL_NAMES:
-            raise ValueError(f"unknown tool: {tool_name}")
-        if tool_name not in normalized_tools:
-            normalized_tools.append(tool_name)
-
-    sub_agent_name = str(parsed.get("sub_agent_name") or "").strip()
-    sub_agent_objective = str(parsed.get("sub_agent_objective") or "").strip()
-
-    if route == "dynamic_sub_agent":
-        if not normalized_tools:
-            raise ValueError("dynamic_sub_agent requires at least one allowed tool")
-        if not sub_agent_objective:
-            raise ValueError("dynamic_sub_agent requires sub_agent_objective")
-        if not sub_agent_name:
-            sub_agent_name = "dynamic_worker"
+    if mode == "tool_task":
+        if not allowed_tools:
+            raise ValueError("tool_task requires at least one allowed tool")
+        if not task_objective:
+            raise ValueError("tool_task requires task_objective")
+        if not task_name:
+            task_name = "tool_worker"
+    elif mode == "coding_orchestra":
+        task_name = "coding_orchestra"
+        task_objective = task_objective or "Route the programming request through bounded specialist phases."
+        allowed_tools = []
+        task_complexity = "multi_step"
+    elif mode == "design_orchestra":
+        task_name = "design_orchestra"
+        task_objective = task_objective or "Route the product design request through bounded design-specialist phases."
+        allowed_tools = []
+        task_complexity = "multi_step"
     else:
-        sub_agent_name = ""
-        sub_agent_objective = ""
-        normalized_tools = []
+        task_name = ""
+        task_objective = ""
+        allowed_tools = []
+        task_complexity = "simple"
+        orchestration_depth = "brief"
+
+    if mode == "memory_update":
+        should_write_memory = True
+        if not memory_content:
+            memory_content = ""
+    elif not should_write_memory:
+        memory_content = ""
 
     return {
-        "route": route,  # type: ignore[typeddict-item]
+        "mode": mode,  # type: ignore[typeddict-item]
         "reason": reason or "classified",
-        "sub_agent_name": sub_agent_name,
-        "sub_agent_objective": sub_agent_objective,
-        "allowed_tools": normalized_tools,
+        "reply_style": reply_style or "Reply briefly and clearly.",
+        "should_write_memory": should_write_memory,
+        "memory_content": memory_content,
+        "memory_segment": memory_segment,
+        "memory_importance": memory_importance,
+        "task_complexity": task_complexity,  # type: ignore[typeddict-item]
+        "task_name": task_name,
+        "task_objective": task_objective,
+        "allowed_tools": allowed_tools,
+        "orchestration_depth": orchestration_depth,  # type: ignore[typeddict-item]
     }
 
 
-async def _repair_router_decision(
-    *,
-    llm: Any,
-    raw_content: Any,
-    state: MiaRouterState,
-) -> RouterDecision:
+async def _repair_decision(*, llm: Any, raw_content: Any, state: MiaRouterState) -> MessageDecision:
     response = await llm.ainvoke(
         [
-            SystemMessage(content=ROUTER_REPAIR_SYSTEM),
+            SystemMessage(content=DECISION_REPAIR_SYSTEM),
             HumanMessage(
                 content=(
+                    f"Local user.md profile:\n{load_user_profile()}\n\n"
                     f"Available tools:\n{public_tool_descriptions()}\n\n"
                     f"Stored memory context:\n{memory_context(state)}\n\n"
                     f"User message:\n{state['message']}\n\n"
-                    f"Invalid router output:\n{raw_content}"
+                    f"Invalid orchestrator output:\n{raw_content}"
                 )
             ),
         ]
     )
-    return _validate_router_decision(_load_router_json(response.content))
+    return _validate_decision(_load_json(response.content))
 
 
-async def parent_router(state: MiaRouterState, settings: Settings, convex: ConvexClient) -> dict:
-    llm = build_chat_model(settings)
+async def classify_message(state: MiaRouterState, settings: Settings, convex: ConvexClient) -> MessageDecision:
+    llm = build_chat_model(settings, temperature=0)
     response = await llm.ainvoke(
         [
-            SystemMessage(content=ROUTER_SYSTEM.format(tools=public_tool_descriptions())),
-            HumanMessage(content=f"Stored memory context:\n{memory_context(state)}\n\nMessage:\n{state['message']}"),
+            SystemMessage(content=DECISION_SYSTEM.format(tools=public_tool_descriptions())),
+            HumanMessage(
+                content=(
+                    f"Local user.md profile:\n{load_user_profile()}\n\n"
+                    f"Stored memory context:\n{memory_context(state)}\n\n"
+                    f"Message:\n{state['message']}"
+                )
+            ),
         ]
     )
     try:
-        decision = _validate_router_decision(_load_router_json(response.content))
+        decision = _validate_decision(_load_json(response.content))
     except (json.JSONDecodeError, TypeError, ValueError):
         try:
-            decision = await _repair_router_decision(llm=llm, raw_content=response.content, state=state)
-            decision["reason"] = f"{decision['reason']} (router JSON repaired)"
+            decision = await _repair_decision(llm=llm, raw_content=response.content, state=state)
+            decision["reason"] = f"{decision['reason']} (decision repaired)"
         except (json.JSONDecodeError, TypeError, ValueError):
             decision = {
-                "route": "direct_reply",
-                "reason": "router output invalid after repair; no tool execution authorized",
-                "sub_agent_name": "",
-                "sub_agent_objective": "",
+                "mode": "fast_reply",
+                "reason": "decision invalid after repair; defaulted to direct reply",
+                "reply_style": "Reply briefly and clearly.",
+                "should_write_memory": False,
+                "memory_content": "",
+                "memory_segment": "other",
+                "memory_importance": 0.0,
+                "task_complexity": "simple",
+                "task_name": "",
+                "task_objective": "",
                 "allowed_tools": [],
+                "orchestration_depth": "brief",
             }
 
     await convex.log_thought(
         message_handle=state["message_handle"],
         run_id=state["run_id"],
-        node="parent_router",
-        content=f"Route={decision['route']}. {decision['reason']}",
-        active_agent="parent_router",
+        node="message_classifier",
+        content=f"Mode={decision['mode']}. {decision['reason']}",
+        active_agent="message_classifier",
     )
-    if decision["route"] == "dynamic_sub_agent":
-        await convex.record_agent_spawn(
-            run_id=state["run_id"],
-            message_handle=state["message_handle"],
-            parent_agent="parent_router",
-            name=decision["sub_agent_name"],
-            objective=decision["sub_agent_objective"],
-            allowed_tools=decision["allowed_tools"],
-            status="planned",
-        )
-    return {
-        "route": decision["route"],
-        "sub_agent_name": decision["sub_agent_name"],
-        "sub_agent_objective": decision["sub_agent_objective"],
-        "allowed_tools": decision["allowed_tools"],
-        "thoughts": state["thoughts"] + [decision["reason"]],
-    }
+    return decision
 
 
-async def direct_reply(state: MiaRouterState, settings: Settings, convex: ConvexClient) -> dict:
+async def maybe_store_memory(
+    *,
+    state: MiaRouterState,
+    convex: ConvexClient,
+    decision: MessageDecision,
+) -> None:
+    if not decision["should_write_memory"]:
+        return
+    content = decision["memory_content"].strip() or state["message"].strip()
+    if not content:
+        return
+    await convex.upsert_memory(
+        content=content,
+        segment=decision["memory_segment"],
+        source_message_handle=state["message_handle"],
+        importance_score=decision["memory_importance"],
+    )
+    await convex.log_thought(
+        message_handle=state["message_handle"],
+        run_id=state["run_id"],
+        node="memory_writer",
+        content=f"Stored memory in segment={decision['memory_segment']}.",
+        active_agent="memory_writer",
+    )
+
+
+async def fast_reply(state: MiaRouterState, settings: Settings, convex: ConvexClient, *, reply_style: str) -> str:
     llm = build_chat_model(settings, temperature=0.2)
     response = await llm.ainvoke(
         [
             SystemMessage(
                 content=(
-                    "You are Mia. Reply warmly and concisely over iMessage. "
-                    "If the user asks you to perform an external action, operate the computer, "
-                    "read or write files, run terminal commands, or search the web, do not claim "
-                    "that you completed it from this direct-reply node."
+                    "You are Mia replying over iMessage. "
+                    f"{reply_style} "
+                    "Answer directly. Do not mention internal routing, tools, or background workflows. "
+                    "If the request needs external actions you cannot do from this direct path, say so plainly."
                 )
             ),
-            HumanMessage(content=f"Stored memory context:\n{memory_context(state)}\n\nMessage:\n{state['message']}"),
-        ]
-    )
-    text = str(response.content)
-    await convex.log_thought(
-        message_handle=state["message_handle"],
-        run_id=state["run_id"],
-        node="direct_reply",
-        content="Generated direct response.",
-        active_agent="direct_reply",
-    )
-    return {"agent_result": text}
-
-
-async def memory_update(state: MiaRouterState, settings: Settings, convex: ConvexClient) -> dict:
-    llm = build_chat_model(settings)
-    response = await llm.ainvoke(
-        [
-            SystemMessage(
+            HumanMessage(
                 content=(
-                    "Extract one durable memory from the message. Return strict JSON: "
-                    '{"content":"...", "segment":"preferences|facts|tasks|relationships|projects|other", '
-                    '"importanceScore":0.0}'
+                    f"Local user.md profile:\n{load_user_profile()}\n\n"
+                    f"Stored memory context:\n{memory_context(state)}\n\n"
+                    f"Message:\n{state['message']}"
                 )
             ),
-            HumanMessage(content=f"Stored memory context:\n{memory_context(state)}\n\nMessage:\n{state['message']}"),
         ]
     )
-    try:
-        parsed = json.loads(str(response.content))
-        content = str(parsed["content"])
-        segment = str(parsed.get("segment", "other"))
-        importance = float(parsed.get("importanceScore", 0.65))
-    except (json.JSONDecodeError, KeyError, TypeError, ValueError):
-        content = state["message"]
-        segment = "facts"
-        importance = 0.55
-    await convex.upsert_memory(
-        content=content,
-        segment=segment,
-        source_message_handle=state["message_handle"],
-        importance_score=importance,
-    )
+    reply = str(response.content).strip()
     await convex.log_thought(
         message_handle=state["message_handle"],
         run_id=state["run_id"],
-        node="memory_update",
-        content=f"Stored memory in segment={segment}.",
-        active_agent="memory_update",
+        node="fast_reply",
+        content="Generated direct iMessage reply.",
+        active_agent="fast_reply",
     )
-    return {"agent_result": "我记住了。"}
+    return reply
 
 
-async def dynamic_sub_agent(state: MiaRouterState, settings: Settings, convex: ConvexClient) -> dict:
-    requested_tools = state.get("allowed_tools", [])
-    name = state.get("sub_agent_name") or "dynamic_sub_agent"
-    if not requested_tools:
-        return {"agent_result": "I need a tool-enabled sub-agent specification before I can do that."}
+async def memory_reply(state: MiaRouterState, convex: ConvexClient) -> str:
+    await convex.log_thought(
+        message_handle=state["message_handle"],
+        run_id=state["run_id"],
+        node="memory_reply",
+        content="Acknowledged memory update.",
+        active_agent="memory_reply",
+    )
+    return "我记住了。"
 
-    if any(tool in OWNER_ONLY_TOOLS for tool in requested_tools):
-        if not settings.owner_phone_number or state["from_number"] != settings.owner_phone_number:
+
+async def execute_tool_task(
+    state: MiaRouterState,
+    settings: Settings,
+    convex: ConvexClient,
+    *,
+    task_name: str,
+    task_objective: str,
+    allowed_tools: list[str],
+    task_complexity: TaskComplexity,
+) -> str:
+    if any(tool in OWNER_ONLY_TOOLS for tool in allowed_tools):
+        owner_identities = {
+            identity
+            for identity in (
+                settings.owner_phone_number,
+                f"telegram:{settings.telegram_owner_chat_id}" if settings.telegram_owner_chat_id else "",
+            )
+            if identity
+        }
+        if state["from_number"] not in owner_identities:
             await convex.log_thought(
                 message_handle=state["message_handle"],
                 run_id=state["run_id"],
-                node="dynamic_sub_agent",
+                node="tool_task",
                 content="Rejected owner-only tool request from non-owner number.",
-                active_agent=state.get("sub_agent_name") or "dynamic_sub_agent",
+                active_agent=task_name or "tool_task",
             )
-            await convex.update_agent_spawn_status(
+            await convex.record_agent_spawn(
                 run_id=state["run_id"],
-                name=name,
+                message_handle=state["message_handle"],
+                parent_agent="message_classifier",
+                name=task_name or "tool_task",
+                objective=task_objective,
+                allowed_tools=allowed_tools,
                 status="blocked",
-                error="Owner-only tool request from non-owner number.",
             )
-            return {"agent_result": "I can't use owner-only tools from this phone number."}
+            return "I can't use owner-only tools from this sender."
 
     registry = tool_registry(
         convex,
@@ -287,58 +407,41 @@ async def dynamic_sub_agent(state: MiaRouterState, settings: Settings, convex: C
         requester_number=state["from_number"],
         run_id=state["run_id"],
         searxng_base_url=settings.searxng_base_url,
+        composio_enabled=settings.composio_enabled,
     )
-    tools = [registry[name] for name in requested_tools if name in registry]
-    missing = sorted(set(requested_tools) - set(registry))
+    tools = [registry[name] for name in allowed_tools if name in registry]
+    missing = sorted(set(allowed_tools) - set(registry))
     if missing:
-        await convex.update_agent_spawn_status(
+        await convex.record_agent_spawn(
             run_id=state["run_id"],
-            name=name,
-            status="blocked",
-            error=f"Unavailable tools: {', '.join(missing)}.",
-        )
-        return {"agent_result": f"I can't create that sub-agent because these tools are unavailable: {', '.join(missing)}."}
-
-    objective = state.get("sub_agent_objective") or state["message"]
-    await convex.update_agent_spawn_status(run_id=state["run_id"], name=name, status="running")
-    if requested_tools == ["open_url"]:
-        try:
-            result = await registry["open_url"].ainvoke({"target": objective})
-        except Exception as error:
-            await convex.update_agent_spawn_status(
-                run_id=state["run_id"],
-                name=name,
-                status="failed",
-                error=str(error),
-            )
-            raise
-        await convex.log_thought(
             message_handle=state["message_handle"],
-            run_id=state["run_id"],
-            node=name,
-            content="Executed dynamic sub-agent with tool: open_url.",
-            active_agent=name,
+            parent_agent="message_classifier",
+            name=task_name or "tool_task",
+            objective=task_objective,
+            allowed_tools=allowed_tools,
+            status="blocked",
         )
-        await convex.update_agent_spawn_status(
-            run_id=state["run_id"],
-            name=name,
-            status="completed",
-            result=str(result),
-        )
-        return {"agent_result": str(result)}
+        return f"I can't create that tool task because these tools are unavailable: {', '.join(missing)}."
 
+    name = task_name or "tool_task"
+    await convex.record_agent_spawn(
+        run_id=state["run_id"],
+        message_handle=state["message_handle"],
+        parent_agent="message_classifier",
+        name=name,
+        objective=task_objective,
+        allowed_tools=allowed_tools,
+        status="running",
+    )
     try:
-        result = await _run_tool_bound_agent(
+        result = await _run_tool_agent(
             state=state,
             settings=settings,
             convex=convex,
             node_name=name,
-            system_prompt=(
-                f"You are Mia's temporary sub-agent named {name}. "
-                f"Objective: {objective}. Use only the tools injected into this node. "
-                "Report the concrete result succinctly."
-            ),
+            task_objective=task_objective,
             tools=tools,
+            task_complexity=task_complexity,
         )
     except Exception as error:
         await convex.update_agent_spawn_status(
@@ -348,154 +451,156 @@ async def dynamic_sub_agent(state: MiaRouterState, settings: Settings, convex: C
             error=str(error),
         )
         raise
+
     await convex.update_agent_spawn_status(
         run_id=state["run_id"],
         name=name,
-        status="completed" if "did not call any assigned tool" not in result["agent_result"] else "blocked",
+        status="completed" if result["completed"] else "blocked",
         result=result["agent_result"],
     )
-    return result
+    return result["agent_result"]
 
 
-async def _run_tool_bound_agent(
+async def _run_tool_agent(
     *,
     state: MiaRouterState,
     settings: Settings,
     convex: ConvexClient,
     node_name: str,
-    system_prompt: str,
+    task_objective: str,
     tools: list[BaseTool],
-) -> dict:
+    task_complexity: TaskComplexity,
+) -> dict[str, Any]:
     tool_map = {tool.name: tool for tool in tools}
-    llm = build_chat_model(settings, temperature=0.1).bind_tools(tools)
-    ai_message = await llm.ainvoke(
-        [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=f"Stored memory context:\n{memory_context(state)}\n\nMessage:\n{state['message']}"),
-        ]
+    tool_list = ", ".join(tool_map)
+    step_budget = 1 if task_complexity == "simple" else 3
+    system_prompt = (
+        f"You are Mia's tool worker named {node_name}. "
+        f"Objective: {task_objective}. "
+        f"You may only use these tools: {tool_list}. "
+        f"This task has a maximum of {step_budget} tool-use round(s). "
+        "Prefer the shortest path to a correct result. "
+        "If the task can be answered after tool output, provide the final user-facing result plainly."
     )
-    messages = [
+    messages: list[Any] = [
         SystemMessage(content=system_prompt),
-        HumanMessage(content=f"Stored memory context:\n{memory_context(state)}\n\nMessage:\n{state['message']}"),
-        ai_message,
-    ]
-    tool_calls = getattr(ai_message, "tool_calls", []) or []
-    if not tool_calls:
-        await convex.log_thought(
-            message_handle=state["message_handle"],
-            run_id=state["run_id"],
-            node=node_name,
-            content=f"Sub-agent was assigned tools but made no tool call: {', '.join(tool_map)}.",
-            active_agent=node_name,
-        )
-        return {
-            "agent_result": (
-                "I created the sub-agent, but it did not call any assigned tool, "
-                "so I did not mark the task completed."
+        HumanMessage(
+            content=(
+                f"Local user.md profile:\n{load_user_profile()}\n\n"
+                f"Stored memory context:\n{memory_context(state)}\n\n"
+                f"Message:\n{state['message']}"
             )
-        }
-
+        ),
+    ]
     executed_tools: list[str] = []
-    invalid_tools: list[str] = []
-    for call in tool_calls:
-        tool_name = call["name"]
-        if tool_name not in tool_map:
-            invalid_tools.append(tool_name)
-            continue
-        result = await tool_map[tool_name].ainvoke(call.get("args", {}))
-        messages.append(ToolMessage(content=str(result), tool_call_id=call["id"]))
-        executed_tools.append(tool_name)
-    if not executed_tools:
-        await convex.log_thought(
-            message_handle=state["message_handle"],
-            run_id=state["run_id"],
-            node=node_name,
-            content=f"Sub-agent requested unauthorized tools only: {', '.join(invalid_tools)}.",
-            active_agent=node_name,
-        )
-        return {"agent_result": "The sub-agent requested tools it was not allowed to use, so I stopped it."}
+
+    for step in range(step_budget):
+        llm = build_chat_model(settings, temperature=0.1).bind_tools(tools)
+        ai_message = await llm.ainvoke(messages)
+        messages.append(ai_message)
+        tool_calls = getattr(ai_message, "tool_calls", []) or []
+
+        if not tool_calls:
+            text = str(ai_message.content).strip()
+            if not executed_tools:
+                await convex.log_thought(
+                    message_handle=state["message_handle"],
+                    run_id=state["run_id"],
+                    node=node_name,
+                    content=f"Tool worker stopped without using assigned tools: {tool_list}.",
+                    active_agent=node_name,
+                )
+                return {
+                    "completed": False,
+                    "agent_result": (
+                        "I created the tool task, but it did not use its assigned tools, "
+                        "so I did not mark the task completed."
+                    ),
+                }
+            await convex.log_thought(
+                message_handle=state["message_handle"],
+                run_id=state["run_id"],
+                node=node_name,
+                content=f"Completed after {step} tool round(s).",
+                active_agent=node_name,
+            )
+            return {"completed": True, "agent_result": text or "Done."}
+
+        invalid_tools: list[str] = []
+        for call in tool_calls:
+            tool_name = call["name"]
+            if tool_name not in tool_map:
+                invalid_tools.append(tool_name)
+                continue
+            result = await tool_map[tool_name].ainvoke(call.get("args", {}))
+            messages.append(ToolMessage(content=str(result), tool_call_id=call["id"]))
+            executed_tools.append(tool_name)
+
+        if invalid_tools and not executed_tools:
+            await convex.log_thought(
+                message_handle=state["message_handle"],
+                run_id=state["run_id"],
+                node=node_name,
+                content=f"Tool worker requested unauthorized tools only: {', '.join(invalid_tools)}.",
+                active_agent=node_name,
+            )
+            return {
+                "completed": False,
+                "agent_result": "The tool worker requested tools it was not allowed to use, so I stopped it."
+            }
 
     final = await build_chat_model(settings, temperature=0.1).ainvoke(messages)
+    final_text = str(final.content).strip()
     await convex.log_thought(
         message_handle=state["message_handle"],
         run_id=state["run_id"],
         node=node_name,
-        content=f"Executed with isolated tools: {', '.join(executed_tools)}.",
+        content=f"Completed with bounded tool loop using: {', '.join(executed_tools)}.",
         active_agent=node_name,
     )
-    return {"agent_result": str(final.content)}
+    return {
+        "completed": bool(executed_tools),
+        "agent_result": final_text or "Done.",
+    }
 
 
-async def compose_reply(state: MiaRouterState, settings: Settings, convex: ConvexClient) -> dict:
-    if state["route"] == "memory_update":
-        reply = state["agent_result"]
-    else:
-        llm = build_chat_model(settings, temperature=0.2)
-        response = await llm.ainvoke(
-            [
-                SystemMessage(
-                    content=(
-                        "You are Mia's response composer. Convert the agent result into a concise "
-                        "iMessage reply. Do not mention internal routing."
-                    )
-                ),
-                HumanMessage(
-                    content=(
-                        f"Stored memory context:\n{memory_context(state)}\n\n"
-                        f"User: {state['message']}\nAgent result: {state['agent_result']}"
-                    )
-                ),
-            ]
+async def handle_message(state: MiaRouterState, settings: Settings, convex: ConvexClient) -> dict[str, Any]:
+    decision = await classify_message(state, settings, convex)
+    await maybe_store_memory(state=state, convex=convex, decision=decision)
+
+    if decision["mode"] == "memory_update":
+        reply = await memory_reply(state, convex)
+        route = "memory_update"
+    elif decision["mode"] == "tool_task":
+        reply = await execute_tool_task(
+            state,
+            settings,
+            convex,
+            task_name=decision["task_name"],
+            task_objective=decision["task_objective"],
+            allowed_tools=decision["allowed_tools"],
+            task_complexity=decision["task_complexity"],
         )
-        reply = str(response.content)
-    await convex.log_thought(
-        message_handle=state["message_handle"],
-        run_id=state["run_id"],
-        node="compose_reply",
-        content="Composed outbound iMessage.",
-        active_agent=None,
-    )
-    return {"reply": reply}
+        route = "tool_task"
+    elif decision["mode"] == "coding_orchestra":
+        state["orchestration_depth"] = decision["orchestration_depth"]  # type: ignore[typeddict-unknown-key]
+        reply = await run_coding_orchestra(state, settings, convex)
+        route = "coding_orchestra"
+    elif decision["mode"] == "design_orchestra":
+        state["orchestration_depth"] = decision["orchestration_depth"]  # type: ignore[typeddict-unknown-key]
+        reply = await run_design_orchestra(state, settings, convex)
+        route = "design_orchestra"
+    else:
+        reply = await fast_reply(
+            state,
+            settings,
+            convex,
+            reply_style=decision["reply_style"],
+        )
+        route = "fast_reply"
 
-
-def route_from_parent(state: MiaRouterState) -> str:
-    return state["route"]
-
-
-def build_router_graph(settings: Settings, convex: ConvexClient):
-    async def parent_router_node(state: MiaRouterState) -> dict:
-        return await parent_router(state, settings, convex)
-
-    async def direct_reply_node(state: MiaRouterState) -> dict:
-        return await direct_reply(state, settings, convex)
-
-    async def dynamic_sub_agent_node(state: MiaRouterState) -> dict:
-        return await dynamic_sub_agent(state, settings, convex)
-
-    async def memory_update_node(state: MiaRouterState) -> dict:
-        return await memory_update(state, settings, convex)
-
-    async def compose_reply_node(state: MiaRouterState) -> dict:
-        return await compose_reply(state, settings, convex)
-
-    graph = StateGraph(MiaRouterState)
-    graph.add_node("parent_router", parent_router_node)
-    graph.add_node("direct_reply", direct_reply_node)
-    graph.add_node("dynamic_sub_agent", dynamic_sub_agent_node)
-    graph.add_node("memory_update", memory_update_node)
-    graph.add_node("compose_reply", compose_reply_node)
-
-    graph.add_edge(START, "parent_router")
-    graph.add_conditional_edges(
-        "parent_router",
-        route_from_parent,
-        {
-            "direct_reply": "direct_reply",
-            "dynamic_sub_agent": "dynamic_sub_agent",
-            "memory_update": "memory_update",
-        },
-    )
-    for node in ["direct_reply", "dynamic_sub_agent", "memory_update"]:
-        graph.add_edge(node, "compose_reply")
-    graph.add_edge("compose_reply", END)
-    return graph.compile()
+    return {
+        "route": route,
+        "reply": reply,
+        "decision": decision,
+    }

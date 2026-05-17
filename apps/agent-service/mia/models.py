@@ -35,6 +35,40 @@ class SendBlueWebhook(BaseModel):
     service: str | None = None
     group_display_name: str | None = None
 
+
+class TelegramUser(BaseModel):
+    id: int
+    is_bot: bool | None = None
+    first_name: str | None = None
+    username: str | None = None
+
+
+class TelegramChat(BaseModel):
+    id: int
+    type: str | None = None
+    title: str | None = None
+    username: str | None = None
+    first_name: str | None = None
+
+
+class TelegramMessage(BaseModel):
+    message_id: int
+    date: int | None = None
+    chat: TelegramChat
+    from_user: TelegramUser | None = Field(default=None, alias="from")
+    text: str | None = None
+    caption: str | None = None
+    voice: dict[str, Any] | None = None
+    audio: dict[str, Any] | None = None
+
+
+class TelegramWebhook(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    update_id: int
+    message: TelegramMessage | None = None
+    edited_message: TelegramMessage | None = None
+
 class MemoryRecord(BaseModel):
     id: str
     content: str

@@ -3,12 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "apps/desktop"
+  ],
   "scripts": {
     "dev": "npm-run-all --parallel dev:convex dev:dashboard",
+    "mia:onboard": "node scripts/mia-onboard.mjs",
     "mia:gateway": "node scripts/mia-gateway.mjs",
     "mia:gateway:localtunnel": "node scripts/mia-gateway.mjs --tunnel=localtunnel",
     "mia:gateway:ngrok": "node scripts/mia-gateway.mjs --tunnel=ngrok",
     "mia:gateway:install": "node scripts/install-mia-gateway-launch-agent.mjs",
+    "desktop:dev": "npm run dev --workspace apps/desktop",
+    "desktop:package": "npm run package --workspace apps/desktop",
     "site:preview": "python3 -m http.server 4173",
     "dev:dashboard": "next dev apps/dashboard",
     "dev:convex": "convex dev",

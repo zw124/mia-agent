@@ -2,7 +2,24 @@
 name = "mia-agent-service"
 version = "0.1.0"
 description = "FastAPI and LangGraph service for Mia personal AI agent"
+readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "Mia Agent Contributors" }
+]
+keywords = ["ai", "agent", "imessage", "telegram", "composio", "fastapi"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Framework :: FastAPI",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
 dependencies = [
   "fastapi>=0.115.0",
   "httpx>=0.27.2",
@@ -14,6 +31,14 @@ dependencies = [
   "python-dotenv>=1.0.1",
   "uvicorn[standard]>=0.32.1"
 ]
+
+[project.scripts]
+mia-agent = "mia.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/zw124/mia-agent"
+Repository = "https://github.com/zw124/mia-agent"
+Issues = "https://github.com/zw124/mia-agent/issues"
 
 [project.optional-dependencies]
 dev = [

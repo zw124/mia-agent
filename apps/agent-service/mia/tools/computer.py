@@ -18,6 +18,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[4]
 MIA_RUNTIME_DIR = PROJECT_ROOT / ".mia"
 SCREENSHOT_DIR = MIA_RUNTIME_DIR / "screenshots"
 PROCESS_LOG_DIR = MIA_RUNTIME_DIR / "processes"
+COMPUTER_AUDIT_LOG = MIA_RUNTIME_DIR / "computer-use.jsonl"
 MANAGED_PROCESSES: dict[str, subprocess.Popen[str]] = {}
 AUTO_APPROVE_NUMBERS: set[str] = set()
 AUTO_APPROVABLE_ACTION_KINDS = {
@@ -43,6 +44,27 @@ HARD_CONFIRM_ACTION_KINDS = {
     "create_directory",
     "copy_file",
     "move_file",
+}
+
+COMPUTER_ACTION_RISK = {
+    "observe": "safe",
+    "open_url": "low",
+    "open_app": "low",
+    "click_screen": "medium",
+    "type_text": "medium",
+    "press_key": "medium",
+    "scroll": "low",
+    "set_clipboard": "medium",
+    "show_notification": "low",
+    "speak_text": "low",
+    "run_terminal_command": "high",
+    "process_start": "high",
+    "process_kill": "high",
+    "write_file": "high",
+    "append_file": "high",
+    "replace_in_file": "high",
+    "delete_file": "high",
+    "send_imessage": "high",
 }
 
 
@@ -101,6 +123,37 @@ def auto_approve_status(number: str) -> str:
             "Terminal commands, background processes, and file mutations still ask first."
         )
     return "Auto approve is off."
+
+
+def _audit_computer_event(event: dict[str, Any]) -> None:
+    MIA_RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+    entry = {
+        "timestamp": time.time(),
+        **event,
+    }
+    with COMPUTER_AUDIT_LOG.open("a") as handle:
+        handle.write(json.dumps(entry, ensure_ascii=False, sort_keys=True) + "\n")
+
+
+def _risk_for_action(action: str) -> str:
+    return COMPUTER_ACTION_RISK.get(action, "high")
+
+
+def _format_action_preview(action: str, payload: dict[str, Any]) -> str:
+    risk = _risk_for_action(action)
+    approval = (
+        "requires explicit approval"
+        if action in HARD_CONFIRM_ACTION_KINDS or risk in {"medium", "high"}
+        else "can be auto-approved only if auto approve is enabled"
+    )
+    return "\n".join(
+        [
+            f"action: {action}",
+            f"risk: {risk}",
+            f"approval: {approval}",
+            f"payload: {json.dumps(payload, ensure_ascii=False, sort_keys=True)}",
+        ]
+    )
 
 
 async def _create_pending_action(
@@ -327,7 +380,86 @@ def build_computer_tools(
         safe_label = re.sub(r"[^a-zA-Z0-9_.-]+", "-", label.strip())[:48] or "screen"
         path = SCREENSHOT_DIR / f"{int(time.time())}-{safe_label}.png"
         subprocess.run(["screencapture", "-x", str(path)], check=True, timeout=30)
+        _audit_computer_event(
+            {
+                "tool": "screenshot_desktop",
+                "risk": "safe",
+                "label": label,
+                "path": str(path),
+                "run_id": run_id,
+                "message_handle": message_handle,
+            }
+        )
         return f"Saved screenshot: {path}"
+
+    async def computer_observe(label: str = "observe", include_apps: bool = True) -> str:
+        frontmost = await get_frontmost_app()
+        screenshot = await screenshot_desktop(label)
+        apps = await list_running_apps() if include_apps else "Skipped running app list."
+        _audit_computer_event(
+            {
+                "tool": "computer_observe",
+                "risk": "safe",
+                "label": label,
+                "frontmost_app": frontmost,
+                "run_id": run_id,
+                "message_handle": message_handle,
+            }
+        )
+        return "\n".join(
+            [
+                "Computer observation:",
+                f"frontmost_app: {frontmost}",
+                screenshot,
+                "visible_apps:",
+                apps,
+            ]
+        )[:12000]
+
+    async def computer_plan(goal: str, current_observation: str = "") -> str:
+        steps = [
+            "1. Observe the current screen and active app before acting.",
+            "2. Prefer keyboard shortcuts and app-native navigation over blind coordinate clicks.",
+            "3. Use one action at a time, then observe again before the next destructive or irreversible action.",
+            "4. For text entry, preview the exact text and target field before requesting type_text.",
+            "5. For file, shell, message, or process actions, request explicit approval and include the exact command or payload.",
+            "6. Stop if the screen state does not match the expected checkpoint.",
+        ]
+        _audit_computer_event(
+            {
+                "tool": "computer_plan",
+                "risk": "safe",
+                "goal": goal,
+                "run_id": run_id,
+                "message_handle": message_handle,
+            }
+        )
+        observation_block = (
+            f"\nCurrent observation:\n{current_observation[:4000]}"
+            if current_observation.strip()
+            else ""
+        )
+        return f"Goal: {goal}\n\nComputer-use policy:\n" + "\n".join(steps) + observation_block
+
+    async def computer_action_preview(action: str, payload_json: str = "{}") -> str:
+        try:
+            payload = json.loads(payload_json or "{}")
+        except json.JSONDecodeError as exc:
+            return f"Invalid payload_json: {exc}"
+        if not isinstance(payload, dict):
+            return "payload_json must decode to an object."
+        preview = _format_action_preview(action, payload)
+        _audit_computer_event(
+            {
+                "tool": "computer_action_preview",
+                "action": action,
+                "risk": _risk_for_action(action),
+                "payload": payload,
+                "run_id": run_id,
+                "message_handle": message_handle,
+            }
+        )
+        return preview
 
     async def read_file(path: str) -> str:
         file_path = _normalize_file_path(path)
@@ -383,6 +515,35 @@ def build_computer_tools(
             if lowered_query in Path(line).name.lower() or lowered_query in line.lower()
         ][: max(1, min(max_results, 200))]
         return "\n".join(matches) if matches else "No matching files found."
+
+    async def workspace_status(path: str = ".") -> str:
+        directory = _normalize_file_path(path)
+        completed = subprocess.run(
+            ["git", "-C", str(directory), "status", "--short"],
+            check=False,
+            text=True,
+            capture_output=True,
+            timeout=30,
+        )
+        if completed.returncode != 0:
+            return (completed.stderr.strip() or "Not a git workspace.")[:12000]
+        output = completed.stdout.strip()
+        return output or "Workspace is clean."
+
+    async def workspace_diff(path: str = ".", max_chars: int = 12000) -> str:
+        directory = _normalize_file_path(path)
+        completed = subprocess.run(
+            ["git", "-C", str(directory), "diff", "--"],
+            check=False,
+            text=True,
+            capture_output=True,
+            timeout=30,
+        )
+        if completed.returncode != 0:
+            return (completed.stderr.strip() or "Could not read workspace diff.")[:12000]
+        limit = max(1000, min(max_chars, 50000))
+        output = completed.stdout.strip()
+        return output[:limit] if output else "No unstaged diff."
 
     async def fetch_webpage(url: str) -> str:
         resolved = resolve_url(url)
@@ -872,6 +1033,30 @@ def build_computer_tools(
             description="Capture the current Mac desktop to a local PNG and return the saved path.",
         ),
         StructuredTool.from_function(
+            coroutine=computer_observe,
+            name="computer_observe",
+            description=(
+                "High-quality computer-use observation: capture screenshot, frontmost app, and visible apps "
+                "before deciding the next action."
+            ),
+        ),
+        StructuredTool.from_function(
+            coroutine=computer_plan,
+            name="computer_plan",
+            description=(
+                "Create a safe step-by-step computer-use plan with checkpoints before clicking, typing, "
+                "running commands, or mutating files."
+            ),
+        ),
+        StructuredTool.from_function(
+            coroutine=computer_action_preview,
+            name="computer_action_preview",
+            description=(
+                "Preview risk, approval requirement, and payload for a proposed computer action before "
+                "requesting the real tool."
+            ),
+        ),
+        StructuredTool.from_function(
             coroutine=read_file,
             name="read_file",
             description="Read a local text file. Use only when the user asks to inspect a file.",
@@ -895,6 +1080,16 @@ def build_computer_tools(
             coroutine=search_files,
             name="search_files",
             description="Search local file paths by name under a directory using ripgrep file listing.",
+        ),
+        StructuredTool.from_function(
+            coroutine=workspace_status,
+            name="workspace_status",
+            description="Show concise git workspace status before or after code edits.",
+        ),
+        StructuredTool.from_function(
+            coroutine=workspace_diff,
+            name="workspace_diff",
+            description="Show the current git diff for review before or after code edits.",
         ),
         StructuredTool.from_function(
             coroutine=fetch_webpage,
@@ -1145,6 +1340,11 @@ def build_computer_tools(
 
 
 def execute_pending_action(action: dict[str, Any]) -> str:
+    from mia.tools.composio import execute_composio_pending_action
+
+    composio_result = execute_composio_pending_action(action)
+    if composio_result is not None:
+        return composio_result
     kind = action["kind"]
     payload = action["payload"]
     if kind == "run_terminal_command":

@@ -1,5 +1,5 @@
-import { MiaDashboard } from "../components/mia-dashboard";
+import { ProductWebsite } from "../components/product-website";
 
 export default function Page() {
-  return <MiaDashboard />;
+  return <ProductWebsite />;
 }
