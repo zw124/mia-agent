@@ -1,0 +1,32 @@
+name: Contributor application
+description: Introduce yourself for sustained or sensitive contribution work
+title: "[Contributor Application]: "
+labels: ["contributor"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Name or handle
+    validations:
+      required: true
+  - type: textarea
+    id: background
+    attributes:
+      label: Relevant background
+    validations:
+      required: true
+  - type: textarea
+    id: interest
+    attributes:
+      label: Areas of interest
+    validations:
+      required: true
+  - type: checkboxes
+    id: agreements
+    attributes:
+      label: Agreements
+      options:
+        - label: I have read the CLA
+          required: true
+        - label: I understand that the community edition is AGPL-3.0-only
+          required: true

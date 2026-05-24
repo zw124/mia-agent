@@ -1,0 +1,16 @@
+name: Documentation request
+description: Request missing or incorrect documentation
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: textarea
+    id: gap
+    attributes:
+      label: Documentation gap
+    validations:
+      required: true
+  - type: textarea
+    id: audience
+    attributes:
+      label: Intended audience
+      description: Who is blocked by the missing documentation?

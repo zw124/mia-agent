@@ -1,0 +1,8 @@
+node_modules
+.next
+dist
+build
+apps/desktop/release
+apps/dashboard/public/pixel-agents/assets
+apps/dashboard/public/downloads
+*.min.js
