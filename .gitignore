@@ -35,3 +35,4 @@ openclaw/
 
 # system
 .DS_Store
+.vercel
