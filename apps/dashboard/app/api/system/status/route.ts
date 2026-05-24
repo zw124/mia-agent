@@ -39,9 +39,9 @@ export async function GET() {
   const channels = [
     {
       id: "web",
-      name: "Web console",
+      name: "Mia app",
       status: "online",
-      detail: "Authenticated control center",
+      detail: "Authenticated desktop and web app",
     },
     {
       id: "desktop",
@@ -50,8 +50,8 @@ export async function GET() {
       detail: heartbeat ? "Gateway heartbeat detected" : "Install and launch the companion",
     },
     {
-      id: "imessage",
-      name: "iMessage",
+      id: "message-relay",
+      name: "Message relay",
       status:
         configured(envValue("SENDBLUE_API_KEY_ID")) &&
         configured(envValue("SENDBLUE_API_SECRET_KEY")) &&
@@ -60,7 +60,7 @@ export async function GET() {
           : "setup",
       detail: configured(envValue("SENDBLUE_FROM_NUMBER"))
         ? envValue("SENDBLUE_FROM_NUMBER")
-        : "SendBlue not configured",
+        : "Optional external relay",
     },
   ];
 

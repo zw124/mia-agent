@@ -8,6 +8,8 @@ out/
 # build
 dist/
 build/
+apps/desktop/release/
+apps/dashboard/public/downloads/
 
 # Python
 __pycache__/

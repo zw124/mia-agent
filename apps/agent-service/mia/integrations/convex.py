@@ -32,11 +32,16 @@ class ConvexClient:
             {"payload": payload.model_dump(by_alias=True), "ignored": ignored},
         )
 
-    async def record_inbound_message(self, payload: SendBlueWebhook) -> bool:
-        result = await self._post(
-            "/internal/inbound-message",
-            {"payload": payload.model_dump(by_alias=True)},
-        )
+    async def record_inbound_message(
+        self,
+        payload: SendBlueWebhook,
+        *,
+        session_id: str | None = None,
+    ) -> bool:
+        body: dict[str, Any] = {"payload": payload.model_dump(by_alias=True)}
+        if session_id is not None:
+            body["sessionId"] = session_id
+        result = await self._post("/internal/inbound-message", body)
         return bool(result.get("accepted"))
 
     async def record_outbound_message(
@@ -44,16 +49,18 @@ class ConvexClient:
         inbound: SendBlueWebhook,
         reply: str,
         sendblue_response: dict[str, Any],
+        *,
+        session_id: str | None = None,
     ) -> None:
-        await self._post(
-            "/internal/outbound-message",
-            {
-                "inboundMessageHandle": inbound.message_handle,
-                "toNumber": inbound.from_number or inbound.number,
-                "content": reply,
-                "sendblueResponse": sendblue_response,
-            },
-        )
+        body: dict[str, Any] = {
+            "inboundMessageHandle": inbound.message_handle,
+            "toNumber": inbound.from_number or inbound.number,
+            "content": reply,
+            "sendblueResponse": sendblue_response,
+        }
+        if session_id is not None:
+            body["sessionId"] = session_id
+        await self._post("/internal/outbound-message", body)
 
     async def log_thought(
         self,
@@ -161,6 +168,18 @@ class ConvexClient:
             {"message": message, "limit": limit},
         )
         return list(result.get("memories", []))
+
+    async def recent_messages(
+        self,
+        *,
+        participant: str | None = None,
+        limit: int = 12,
+    ) -> list[dict[str, Any]]:
+        result = await self._post(
+            "/internal/messages/recent",
+            {"participant": participant, "limit": limit},
+        )
+        return list(result if isinstance(result, list) else result.get("messages", []))
 
     async def create_calendar_hold(
         self,

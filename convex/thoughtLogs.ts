@@ -40,3 +40,15 @@ export const activeAgent = query({
     return recent[0]?.activeAgent ?? null;
   },
 });
+
+export const byMessageHandle = query({
+  args: { messageHandle: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("thoughtLogs")
+      .withIndex("by_message_handle", (q) => q.eq("messageHandle", args.messageHandle))
+      .order("asc")
+      .collect();
+  },
+});
+

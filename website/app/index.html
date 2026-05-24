@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mia — Workspace Login</title>
+  <meta name="description" content="Sign in to Mia, a local-first AI agent workspace." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --paper: #F2EFE8;
+      --paper-2: #E9E3D8;
+      --ink: #1A1916;
+      --ink-2: #4A4840;
+      --muted: #8A877E;
+      --line: rgba(26,25,22,0.14);
+      --line-soft: rgba(26,25,22,0.08);
+      --green: #20351F;
+      --accent: #A97852;
+      --mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      --serif: 'Instrument Serif', Georgia, serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: var(--mono);
+      background:
+        radial-gradient(circle at 24% 20%, rgba(255,255,255,0.75), transparent 34%),
+        linear-gradient(135deg, #E6DFD4, #F8F5EF 48%, #DDD5C7);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 4vh 3vw;
+    }
+
+    .panel {
+      width: min(1480px, 100%);
+      min-height: min(900px, 92vh);
+      display: grid;
+      grid-template-columns: 0.78fr 1fr;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(242,239,232,0.82);
+      box-shadow: 0 28px 90px rgba(26,25,22,0.16);
+    }
+
+    .visual {
+      position: relative;
+      min-height: 720px;
+      padding: 34px;
+      color: #F3EFE7;
+      background:
+        linear-gradient(rgba(6,8,7,0.22) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(6,8,7,0.22) 1px, transparent 1px),
+        radial-gradient(circle at 58% 38%, rgba(194,132,88,0.28), transparent 24%),
+        linear-gradient(145deg, #10120F, #27241B 52%, #0C0D0B);
+      background-size: 28px 28px, 28px 28px, auto, auto;
+    }
+
+    .visual::before {
+      content: "";
+      position: absolute;
+      inset: 22px;
+      border: 1px solid rgba(169,120,82,0.58);
+      pointer-events: none;
+    }
+
+    .brand {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand img {
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+    }
+
+    .brand h1 {
+      font-family: var(--serif);
+      font-size: clamp(2.2rem, 4vw, 3.6rem);
+      font-weight: 400;
+      letter-spacing: -0.03em;
+    }
+
+    .brand small {
+      display: block;
+      margin-top: 4px;
+      color: rgba(243,239,231,0.68);
+      font-size: 0.74rem;
+      letter-spacing: 0.42em;
+      text-transform: uppercase;
+    }
+
+    .orbit {
+      position: absolute;
+      inset: 28% 12% auto;
+      height: 360px;
+      border: 1px solid rgba(243,239,231,0.12);
+      border-radius: 999px;
+      transform: rotate(-14deg);
+    }
+
+    .orbit::before,
+    .orbit::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      background: #D8FF91;
+      box-shadow: 0 0 70px rgba(216,255,145,0.24);
+    }
+
+    .orbit::before {
+      width: 18px;
+      height: 18px;
+      left: 18%;
+      top: 10%;
+    }
+
+    .orbit::after {
+      width: 10px;
+      height: 10px;
+      right: 18%;
+      bottom: 8%;
+      background: #A97852;
+    }
+
+    .trace-card {
+      position: absolute;
+      left: 58px;
+      right: 58px;
+      bottom: 70px;
+      z-index: 1;
+      padding: 24px;
+      border: 1px solid rgba(243,239,231,0.13);
+      border-radius: 14px;
+      background: rgba(12,13,11,0.62);
+      backdrop-filter: blur(18px);
+    }
+
+    .trace-card p {
+      color: rgba(243,239,231,0.74);
+      font-size: 0.86rem;
+      line-height: 1.8;
+    }
+
+    .trace-list {
+      position: relative;
+      display: grid;
+      gap: 14px;
+      margin-top: 18px;
+      padding-left: 24px;
+    }
+
+    .trace-list::before {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 4px;
+      bottom: 4px;
+      width: 1px;
+      background: rgba(216,255,145,0.28);
+    }
+
+    .trace-item {
+      position: relative;
+      display: grid;
+      gap: 3px;
+      color: rgba(243,239,231,0.9);
+      font-size: 0.78rem;
+    }
+
+    .trace-item::before {
+      content: "";
+      position: absolute;
+      left: -22px;
+      top: 5px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #D8FF91;
+    }
+
+    .trace-item small {
+      color: rgba(243,239,231,0.48);
+      font-size: 0.72rem;
+    }
+
+    .form-side {
+      position: relative;
+      padding: clamp(44px, 7vw, 96px);
+      background:
+        linear-gradient(120deg, rgba(255,255,255,0.44), transparent 42%),
+        var(--paper);
+    }
+
+    .back {
+      position: absolute;
+      top: 42px;
+      right: 52px;
+      color: var(--ink-2);
+      font-family: var(--serif);
+      font-size: 1.05rem;
+      border-bottom: 1px solid var(--ink-2);
+    }
+
+    .form-wrap {
+      width: min(620px, 100%);
+      margin: 7vh auto 0;
+    }
+
+    .kicker {
+      margin-bottom: 20px;
+      color: var(--accent);
+      font-size: 0.78rem;
+      letter-spacing: 0.45em;
+      text-transform: uppercase;
+    }
+
+    .title {
+      max-width: 560px;
+      margin-bottom: 18px;
+      color: var(--green);
+      font-family: var(--serif);
+      font-size: clamp(3.2rem, 5.3vw, 5.6rem);
+      font-weight: 400;
+      line-height: 0.96;
+      letter-spacing: -0.04em;
+    }
+
+    .copy {
+      margin-bottom: 34px;
+      color: var(--ink-2);
+      font-family: Georgia, serif;
+      font-size: 1.08rem;
+      line-height: 1.7;
+    }
+
+    .form {
+      display: grid;
+      gap: 14px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .input {
+      width: 100%;
+      height: 58px;
+      padding: 0 18px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: rgba(255,255,255,0.34);
+      color: var(--ink);
+      font-family: Georgia, serif;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.16s, background 0.16s;
+    }
+
+    .input:focus {
+      border-color: rgba(32,53,31,0.52);
+      background: rgba(255,255,255,0.62);
+    }
+
+    .input::placeholder { color: rgba(74,72,64,0.55); }
+
+    .form-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 4px 0 10px;
+      color: var(--ink-2);
+      font-family: Georgia, serif;
+      font-size: 0.98rem;
+    }
+
+    .remember {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .remember input { width: 18px; height: 18px; accent-color: var(--green); }
+    .forgot { border-bottom: 1px solid rgba(32,53,31,0.35); }
+
+    .submit {
+      height: 60px;
+      border: 0;
+      border-radius: 5px;
+      background: var(--green);
+      color: #F8F5EF;
+      font-family: Georgia, serif;
+      font-size: 1.05rem;
+      cursor: pointer;
+      transition: transform 0.16s, opacity 0.16s;
+    }
+
+    .submit:hover { opacity: 0.92; transform: translateY(-1px); }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin: 28px 0;
+      color: var(--muted);
+      font-family: Georgia, serif;
+      font-size: 0.95rem;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+    }
+
+    .status {
+      min-height: 22px;
+      margin-top: 14px;
+      color: var(--ink-2);
+      font-size: 0.76rem;
+      line-height: 1.6;
+    }
+
+    .note {
+      display: grid;
+      grid-template-columns: 90px 1fr;
+      gap: 24px;
+      margin-top: 28px;
+      padding: 26px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.28);
+      box-shadow: 0 18px 44px rgba(26,25,22,0.06);
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 74px;
+      height: 74px;
+      border: 1px solid rgba(169,120,82,0.32);
+      border-radius: 50%;
+      color: var(--accent);
+      font-family: var(--serif);
+      font-size: 2.4rem;
+    }
+
+    .note h2 {
+      margin-bottom: 12px;
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.36em;
+      text-transform: uppercase;
+    }
+
+    .note ul {
+      display: grid;
+      gap: 9px;
+      list-style: none;
+      color: var(--ink-2);
+      font-family: Georgia, serif;
+      font-size: 0.98rem;
+    }
+
+    .note li::before {
+      content: "✓";
+      margin-right: 12px;
+      color: var(--green);
+    }
+
+    @media (max-width: 980px) {
+      .shell { padding: 0; }
+      .panel {
+        min-height: 100vh;
+        grid-template-columns: 1fr;
+        border-radius: 0;
+      }
+      .visual {
+        min-height: 360px;
+        padding: 28px;
+      }
+      .trace-card {
+        left: 32px;
+        right: 32px;
+        bottom: 32px;
+      }
+      .form-side { padding: 40px 24px 56px; }
+      .back { top: 24px; right: 24px; }
+      .form-wrap { margin-top: 74px; }
+      .row { grid-template-columns: 1fr; }
+      .note { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .visual::before { inset: 14px; }
+      .brand h1 { font-size: 2.4rem; }
+      .title { font-size: 3.4rem; }
+      .form-meta {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="panel" aria-label="Mia workspace sign in">
+      <div class="visual">
+        <div class="brand">
+          <img src="../assets/mia-logo.png" alt="Mia logo" />
+          <div>
+            <h1>Mia</h1>
+            <small>Agent workspace</small>
+          </div>
+        </div>
+        <div class="orbit" aria-hidden="true"></div>
+        <div class="trace-card">
+          <p>Mia opens as software first: chat, memory, browser actions, computer-use traces, and local runtime status in one workspace.</p>
+          <div class="trace-list">
+            <div class="trace-item">Start workspace<small>desktop runtime and web session connected</small></div>
+            <div class="trace-item">Route task<small>memory, planning, tools, and reply stream</small></div>
+            <div class="trace-item">Observe actions<small>browser and computer-use events stay visible</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-side">
+        <a class="back" href="../">← Back to site</a>
+        <div class="form-wrap">
+          <p class="kicker">Welcome to Mia</p>
+          <h2 class="title">Sign in or create your workspace</h2>
+          <p class="copy">Use Mia from the hosted workspace while the desktop app runs the local agent on your machine.</p>
+
+          <form class="form" id="login-form">
+            <div class="row">
+              <input class="input" name="firstName" placeholder="First name" autocomplete="given-name" />
+              <input class="input" name="lastName" placeholder="Last name" autocomplete="family-name" />
+            </div>
+            <input class="input" name="email" type="email" placeholder="Email address" autocomplete="email" required />
+            <input class="input" name="password" type="password" placeholder="Password" autocomplete="current-password" required />
+            <div class="form-meta">
+              <label class="remember"><input type="checkbox" /> Remember me</label>
+              <a class="forgot" href="../#contact">Forgot password?</a>
+            </div>
+            <button class="submit" type="submit">Continue to Mia</button>
+            <p class="status" id="status" role="status"></p>
+          </form>
+
+          <div class="divider">workspace includes</div>
+
+          <div class="note">
+            <div class="mark">M</div>
+            <div>
+              <h2>Mia membership</h2>
+              <ul>
+                <li>Local agent runtime connected to the hosted workspace</li>
+                <li>Chat history, dashboard, settings, and computer-use trace views</li>
+                <li>Supabase-ready account and workspace storage path</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById("login-form");
+    const status = document.getElementById("status");
+    const hostedAppUrl = window.MIA_APP_URL || "";
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (hostedAppUrl) {
+        window.location.href = hostedAppUrl;
+        return;
+      }
+      status.textContent = "Workspace page is ready. Connect Supabase Auth or set window.MIA_APP_URL to route this static build into the hosted app.";
+    });
+  </script>
+</body>
+</html>

@@ -1,119 +1,120 @@
 "use client";
 
-import { ArrowRight, Download, Hexagon } from "lucide-react";
+import { Download } from "lucide-react";
+import { useEffect, useState } from "react";
+
+const installTabs = ["mac", "windows", "linux"];
+const macDownloadUrl = "https://github.com/zw124/mia-agent/releases/download/v0.1.0/Mia-0.1.0-arm64.dmg";
+const featureRows = [
+  ["01", "desktop first", "Mia launches as a real app. The agent service, dashboard, and local runtime are started for the user."],
+  ["02", "tool execution", "Browser tasks, computer observation, clicks, typing, and key presses are shown as readable execution events."],
+  ["03", "memory context", "Recent sessions and durable memories are loaded before routing, so follow-up questions stay grounded."],
+  ["04", "agent room", "A visual operating room reflects the active run state instead of acting like a static decoration."],
+];
+
+function ProductTerminal() {
+  return (
+    <div className="opencode-product-terminal" aria-label="Mia product trace preview">
+      <div className="terminal-message active">
+        <span className="terminal-bar" />
+        <p>open wikipedia, search algebra, click the first result</p>
+        <small>kai</small>
+      </div>
+      <div className="terminal-response">
+        <p>I’ll route this through the local computer-use worker.</p>
+        <ul>
+          <li>message_classifier <span>tool_task</span></li>
+          <li>browser_task <span>wikipedia · algebra</span></li>
+          <li>computer_observe <span>Safari frontmost</span></li>
+          <li>click_screen <span>first result</span></li>
+        </ul>
+      </div>
+      <div className="terminal-response muted">
+        <p>done in 4.2s · 6 tool events</p>
+      </div>
+    </div>
+  );
+}
 
 export function ProductWebsite() {
+  const [isElectron, setIsElectron] = useState(false);
+
+  useEffect(() => {
+    setIsElectron(typeof (window as any).miaDesktop?.isElectron === "boolean");
+  }, []);
+
   return (
-    <main className="site">
-      <header className="site-nav">
-        <a className="site-brand" href="/">
-          <Hexagon size={24} fill="currentColor" />
-          <span>MIA</span>
-        </a>
-        <nav aria-label="Primary navigation">
-          <a href="#product">Product</a>
-          <a href="#enterprise">Enterprise</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#resources">Resources</a>
-        </nav>
-        <div className="site-actions">
-          <a href="/app">Sign in</a>
-          <a className="outline" href="mailto:sales@mia.local">Contact sales</a>
-          <a className="solid" href="/app">Download</a>
-        </div>
-      </header>
+    <main className={`opencode-site opencode-product-v2 ${isElectron ? "is-electron" : ""}`}>
+      {isElectron ? <div className="electron-titlebar" /> : null}
 
-      <section className="hero" id="product">
-        <h1>
-          Built to make you extraordinarily productive,
-          <br />
-          Mia is the best way to control AI.
-        </h1>
-        <div className="hero-actions">
-          <a className="primary" href="/app">
-            Download for macOS <Download size={19} />
+      <div className="oc-page-frame">
+        <header className="oc-nav">
+          <a className="oc-wordmark" href="/" aria-label="Mia home">mia</a>
+          <nav aria-label="Product navigation">
+            <a href="#docs">Docs</a>
+            <a href="#agent">Agent</a>
+            <a href="/app">App</a>
+          </nav>
+          <a className="oc-download" href={macDownloadUrl}>
+            <Download size={18} />
+            Download
           </a>
-          <a className="secondary" href="mailto:sales@mia.local">
-            Request a demo <ArrowRight size={19} />
-          </a>
-        </div>
-      </section>
+        </header>
 
-      <section className="product-shot" aria-label="Mia desktop preview">
-        <div className="shot-backdrop">
-          <div className="desktop-frame">
-            <div className="window-bar">
-              <span />
-              <span />
-              <span />
-              <strong>Mia Desktop</strong>
+        <section className="oc-hero">
+          <p className="oc-announcement">
+            <span>New</span>
+            Desktop app available for local agent runs. <a href="/app">Launch now</a>
+          </p>
+
+          <h1>The personal AI agent for your computer</h1>
+          <p className="oc-subtitle">
+            Mia is a desktop-first agent runtime with chat, memory, computer use, visible tool traces, and an agent room that reflects real work.
+          </p>
+
+          <div className="oc-install-card">
+            <div className="oc-install-tabs">
+              {installTabs.map((tab, index) => (
+                <button key={tab} className={index === 0 ? "active" : ""} type="button">{tab}</button>
+              ))}
             </div>
-            <div className="desktop-grid">
-              <aside className="desktop-list">
-                <p>READY TO REVIEW 6</p>
-                {[
-                  ["Build landing page", "Done. Fonts preload in the head", "now"],
-                  ["Analyze browser session", "All set. Workflow connected", "now"],
-                  ["Plan computer control", "+20 -3 Drafted implementation", "10m"],
-                  ["Set up iMessage", "Webhook and approval policy", "30m"],
-                  ["Connect storage", "+135 -21 Convex state", "45m"],
-                ].map(([title, detail, time]) => (
-                  <div className="review-row" key={title}>
-                    <i>✓</i>
-                    <span>
-                      <strong>{title}</strong>
-                      <small>{detail}</small>
-                    </span>
-                    <em>{time}</em>
-                  </div>
-                ))}
-              </aside>
-              <section className="desktop-chat">
-                <h2>Build local agent</h2>
-                <div className="prompt">make Mia run from web, desktop, and iMessage</div>
-                <p className="trace">Read README.md</p>
-                <p className="trace">Read apps/agent-service/mia/main.py</p>
-                <p className="trace">Thought 6s</p>
-                <p className="answer">
-                  I&apos;ll create a minimal product flow where the website explains the app and
-                  the desktop client opens directly to chat.
-                </p>
-                <div className="file-change">apps/dashboard/app/page.tsx <b>+52 -0</b></div>
-                <div className="file-change">apps/desktop/src/main.mjs <b>+18 -0</b></div>
-              </section>
-              <section className="desktop-preview">
-                <div className="browser-bar">
-                  <span>←</span>
-                  <span>→</span>
-                  <span>↻</span>
-                  <strong>http://localhost:3000</strong>
-                </div>
-                <article>
-                  <h3>Mia</h3>
-                  <p>
-                    A local AI agent for your computer. One login, one app, three ways to talk:
-                    web, desktop, and iMessage.
-                  </p>
-                  <button>Open chat</button>
-                </article>
-              </section>
-              <div className="cli-card">
-                <div>connects local control:</div>
-                <code>mia gateway start</code>
-                <p>I&apos;ll keep the app running and ask before risky actions.</p>
-              </div>
+            <div className="oc-install-command">
+              <span>open</span>
+              <strong>/app</strong>
+              <button type="button" aria-label="Copy launch command">⌘</button>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="site-section">
-        <h2>One app after install.</h2>
-        <p>
-          The website explains and downloads Mia. The desktop app is the product: log in once,
-          finish setup, and chat with the same agent from the app, browser, or iMessage.
-        </p>
-      </section>
+        <ProductTerminal />
+
+        <section id="agent" className="oc-section">
+          <div className="oc-section-head">
+            <span>agent runtime</span>
+            <h2>Not a terminal demo. A product users can open.</h2>
+          </div>
+          <div className="oc-feature-list">
+            {featureRows.map(([id, title, text]) => (
+              <article key={id} className="oc-feature-row">
+                <span>{id}</span>
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="docs" className="oc-final">
+          <div>
+            <span>ship mia</span>
+            <h2>Sign in. Ask. Watch the work happen.</h2>
+          </div>
+          <div className="oc-final-actions">
+            <a href={macDownloadUrl}>Download app</a>
+            <a href="/app">Open web app</a>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

@@ -5,6 +5,7 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 import httpx
+from pydantic import BaseModel
 
 from mia.graphs.memory_court import build_memory_court_graph
 from mia.graphs.router import handle_message
@@ -161,6 +162,18 @@ async def stop_typing_indicator(
         await task
 
 
+async def recent_conversation_context(
+    *,
+    convex: ConvexClient,
+    participant: str,
+    limit: int = 12,
+) -> list[dict[str, object]]:
+    try:
+        return await convex.recent_messages(participant=participant, limit=limit)
+    except Exception:
+        return []
+
+
 async def send_progress_message(
     *,
     sendblue: SendBlueClient,
@@ -221,6 +234,12 @@ def get_telegram(settings: Settings = Depends(get_settings)) -> TelegramClient:
     return TelegramClient(settings)
 
 
+class WebChatPayload(BaseModel):
+    message: str
+    client_message_handle: str | None = None
+    session_id: str | None = None
+
+
 @app.get("/health")
 async def health(settings: Settings = Depends(get_settings)) -> dict[str, str]:
     llm_status = (
@@ -229,6 +248,123 @@ async def health(settings: Settings = Depends(get_settings)) -> dict[str, str]:
         else "missing"
     )
     return {"status": "ok", "llm": llm_status}
+
+
+@app.post("/web/chat")
+async def web_chat(
+    payload: WebChatPayload,
+    settings: Settings = Depends(get_settings),
+    convex: ConvexClient = Depends(get_convex),
+) -> dict[str, object]:
+    message_content = payload.message.strip()
+    if not message_content:
+        raise HTTPException(status_code=400, detail="Empty message")
+
+    # Synthesize a SendBlueWebhook-compatible payload. When the dashboard provides
+    # a client handle, reuse it so thought/tool logs stream into the visible row.
+    if payload.client_message_handle and payload.client_message_handle.startswith("web:"):
+        message_handle = payload.client_message_handle[:160]
+    else:
+        message_handle = f"web:{uuid.uuid4()}"
+    synthetic = SendBlueWebhook(
+        content=message_content,
+        is_outbound=False,
+        message_handle=message_handle,
+        from_number="web-client",
+        number="web-client",
+        to_number="bot",
+        message_type="web",
+        participants=["web-client"],
+        service="web",
+    )
+
+    # 1. Record inbound in Convex. Web chat is intentionally not local-only:
+    # if Convex is unavailable or unauthorized, surface the real configuration
+    # error instead of silently running without persistence.
+    try:
+        accepted = await convex.record_inbound_message(
+            synthetic,
+            session_id=payload.session_id,
+        )
+        if not accepted:
+            return {"ok": True, "deduped": True}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Convex persistence unavailable: {exc}",
+        ) from exc
+
+    # 2. Start agent run
+    run_id = str(uuid.uuid4())
+    await convex.start_agent_run(run_id=run_id, message_handle=message_handle)
+    await convex.log_thought(
+        message_handle=message_handle,
+        run_id=run_id,
+        node="queued",
+        content="Received web chat message and started a local agent run.",
+        active_agent="message_classifier",
+    )
+
+    # 3. Handle message (LangGraph run)
+    try:
+        await convex.log_thought(
+            message_handle=message_handle,
+            run_id=run_id,
+            node="context",
+            content="Loading recent conversation context and relevant memories.",
+            active_agent="message_classifier",
+        )
+        relevant_memories = await convex.relevant_memories(message=message_content)
+        conversation_context = await recent_conversation_context(
+            convex=convex,
+            participant="web-client",
+        )
+        result = await handle_message(
+            {
+                "run_id": run_id,
+                "message": message_content,
+                "relevant_memories": relevant_memories,
+                "from_number": "web-client",
+                "sendblue_number": None,
+                "message_handle": message_handle,
+                "route": "direct_reply",
+                "sub_agent_name": "",
+                "sub_agent_objective": "",
+                "allowed_tools": [],
+                "agent_result": "",
+                "reply": "",
+                "thoughts": [],
+                "conversation_context": conversation_context,
+                "progress_callback": lambda x: None,
+            },
+            settings,
+            convex,
+        )
+    except Exception as exc:
+        await convex.fail_agent_run(run_id=run_id, error=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    # 4. Record outbound message in Convex
+    reply = result["reply"]
+    synthetic_response = {
+        "status": "delivered",
+        "message_handle": f"web-reply:{uuid.uuid4()}",
+    }
+    await convex.record_outbound_message(
+        synthetic, reply, synthetic_response,
+        session_id=payload.session_id,
+    )
+    await convex.complete_agent_run(run_id=run_id, active_agent=result["route"])
+
+    return {
+        "ok": True,
+        "reply": reply,
+        "route": result["route"],
+        "message_handle": message_handle,
+        "run_id": run_id,
+        "persistence": "convex",
+    }
+
 
 
 @app.post("/webhooks/sendblue/receive")
@@ -328,6 +464,10 @@ async def receive_sendblue(
 
     try:
         relevant_memories = await convex.relevant_memories(message=message_content)
+        conversation_context = await recent_conversation_context(
+            convex=convex,
+            participant=payload.from_number or payload.number,
+        )
         result = await handle_message(
             {
                 "run_id": run_id,
@@ -343,6 +483,7 @@ async def receive_sendblue(
                 "agent_result": "",
                 "reply": "",
                 "thoughts": [],
+                "conversation_context": conversation_context,
                 "progress_callback": progress_callback,
             },
             settings,
@@ -464,6 +605,10 @@ async def receive_telegram(
 
     try:
         relevant_memories = await convex.relevant_memories(message=message_content)
+        conversation_context = await recent_conversation_context(
+            convex=convex,
+            participant=f"telegram:{chat_id}",
+        )
         result = await handle_message(
             {
                 "run_id": run_id,
@@ -479,6 +624,7 @@ async def receive_telegram(
                 "agent_result": "",
                 "reply": "",
                 "thoughts": [],
+                "conversation_context": conversation_context,
                 "progress_callback": progress_callback,
             },
             settings,

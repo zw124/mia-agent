@@ -2,16 +2,55 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
 
 const COOKIE_NAME = "mia_session";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
-const usersFile = path.join(process.cwd(), ".mia", "users.json");
+function findWorkspaceRoot() {
+  const candidates = [
+    process.cwd(),
+    path.join(process.cwd(), ".."),
+    path.join(process.cwd(), "..", ".."),
+  ];
+
+  for (const candidate of candidates) {
+    if (
+      existsSync(path.join(candidate, "package.json")) &&
+      existsSync(path.join(candidate, "apps", "dashboard"))
+    ) {
+      return candidate;
+    }
+  }
+
+  return process.cwd();
+}
+
+const usersFile = path.join(findWorkspaceRoot(), ".mia", "users.json");
 
 type UserRecord = {
   email: string;
   password: string;
   createdAt: number;
 };
+
+function supabaseConfig() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+  if (!url || !key) return null;
+  return { url, key };
+}
+
+function supabaseAuthClient() {
+  const config = supabaseConfig();
+  if (!config) return null;
+  return createClient(config.url, config.key, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+  });
+}
 
 function secret() {
   return process.env.MIA_WEB_AUTH_SECRET || process.env.MIA_INTERNAL_SECRET || "dev-secret";
@@ -86,13 +125,25 @@ function writeUsers(users: UserRecord[]) {
 }
 
 export function hasRegisteredUsers() {
+  if (supabaseConfig()) return true;
   return readUsers().length > 0;
 }
 
-export function registerUser(email: string, password: string) {
+export async function registerUser(email: string, password: string) {
   const normalizedEmail = email.trim().toLowerCase();
   if (!normalizedEmail || password.length < 6) {
     return { ok: false, error: "Use an email and a password with at least 6 characters." };
+  }
+  const supabase = supabaseAuthClient();
+  if (supabase) {
+    const { error } = await supabase.auth.signUp({
+      email: normalizedEmail,
+      password,
+    });
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+    return { ok: true, email: normalizedEmail };
   }
   const users = readUsers();
   if (users.some((user) => user.email === normalizedEmail)) {
@@ -103,8 +154,16 @@ export function registerUser(email: string, password: string) {
   return { ok: true, email: normalizedEmail };
 }
 
-export function validateLogin(email: string, password: string) {
+export async function validateLogin(email: string, password: string) {
   const normalizedEmail = email.trim().toLowerCase();
+  const supabase = supabaseAuthClient();
+  if (supabase) {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+    return !error;
+  }
   const users = readUsers();
   if (users.length > 0) {
     return users.some((user) => user.email === normalizedEmail && user.password === password);

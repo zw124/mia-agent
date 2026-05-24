@@ -10,7 +10,7 @@ type RegisterPayload = {
 
 export async function POST(request: Request) {
   const body = (await request.json()) as RegisterPayload;
-  const result = registerUser(body.email ?? "", body.password ?? "");
+  const result = await registerUser(body.email ?? "", body.password ?? "");
   if (!result.ok || !result.email) {
     return NextResponse.json(result, { status: 400 });
   }

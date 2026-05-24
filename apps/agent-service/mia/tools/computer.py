@@ -7,7 +7,7 @@ import subprocess
 import time
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import quote_plus, urlparse
 
 import httpx
 from langchain_core.tools import StructuredTool
@@ -139,6 +139,10 @@ def _risk_for_action(action: str) -> str:
     return COMPUTER_ACTION_RISK.get(action, "high")
 
 
+def _can_execute_without_approval(requester_number: str, kind: str) -> bool:
+    return requester_number == "web-client" and kind in AUTO_APPROVABLE_ACTION_KINDS
+
+
 def _format_action_preview(action: str, payload: dict[str, Any]) -> str:
     risk = _risk_for_action(action)
     approval = (
@@ -178,7 +182,9 @@ async def _create_pending_action(
         payload=payload,
         risk=risk,
     )
-    if is_auto_approve_enabled(requester_number) and kind in AUTO_APPROVABLE_ACTION_KINDS:
+    if _can_execute_without_approval(requester_number, kind) or (
+        is_auto_approve_enabled(requester_number) and kind in AUTO_APPROVABLE_ACTION_KINDS
+    ):
         action = {
             "code": code,
             "kind": kind,
@@ -191,7 +197,7 @@ async def _create_pending_action(
                 requester_number=requester_number,
                 result=result,
             )
-            return f"Auto approved and completed:\n{result[:1200]}"
+            return f"Completed:\n{result[:1200]}"
         except Exception as exc:
             await convex.fail_pending_action(
                 code=code,
@@ -559,6 +565,51 @@ def build_computer_tools(
 
     async def web_fetch(url: str) -> str:
         return await fetch_webpage(url)
+
+    async def browser_task(goal: str, site: str = "", query: str = "") -> str:
+        goal_text = goal.strip()
+        site_text = site.strip().lower()
+        query_text = query.strip()
+        lowered = goal_text.lower()
+
+        if not query_text:
+            search_match = re.search(r"(?:search|搜索)\s+(.+?)(?:\s+(?:and|然后|打开)|$)", goal_text, flags=re.IGNORECASE)
+            if search_match:
+                query_text = search_match.group(1).strip(" .，。")
+
+        if not site_text:
+            for known in KNOWN_SITES:
+                if known in lowered:
+                    site_text = known
+                    break
+
+        if site_text == "wikipedia" and query_text:
+            target = f"https://en.wikipedia.org/wiki/Special:Search?search={quote_plus(query_text)}&go=Go"
+        elif site_text in KNOWN_SITES and query_text:
+            if site_text == "google":
+                target = f"https://www.google.com/search?q={quote_plus(query_text)}"
+            elif site_text == "youtube":
+                target = f"https://www.youtube.com/results?search_query={quote_plus(query_text)}"
+            elif site_text == "github":
+                target = f"https://github.com/search?q={quote_plus(query_text)}"
+            else:
+                target = KNOWN_SITES[site_text]
+        elif site_text in KNOWN_SITES:
+            target = KNOWN_SITES[site_text]
+        else:
+            target = resolve_url(goal_text)
+
+        subprocess.run(["open", target], check=True)
+        time.sleep(1.2)
+        observation = await computer_observe(label="browser-task", include_apps=False)
+        return "\n".join(
+            [
+                f"Opened: {target}",
+                f"Goal: {goal_text}",
+                "Checkpoint:",
+                observation,
+            ]
+        )[:12000]
 
     async def get_clipboard() -> str:
         completed = subprocess.run(
@@ -1100,6 +1151,15 @@ def build_computer_tools(
             coroutine=web_fetch,
             name="web_fetch",
             description="OpenClaw-compatible alias for fetching a webpage over HTTP/HTTPS.",
+        ),
+        StructuredTool.from_function(
+            coroutine=browser_task,
+            name="browser_task",
+            description=(
+                "Autonomous browser task for common browsing goals. Opens the relevant site or search URL, "
+                "then observes the screen. Use for requests like opening Wikipedia, searching a query, "
+                "or navigating to a top result before lower-level click/type actions."
+            ),
         ),
         StructuredTool.from_function(
             coroutine=get_clipboard,

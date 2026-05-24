@@ -127,6 +127,16 @@ http.route({
 });
 
 http.route({
+  path: "/internal/messages/recent",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    if (!isAuthorized(request)) return json({ error: "unauthorized" }, 401);
+    const body = await request.json();
+    return json(await ctx.runQuery(internal.messages.recentInternal, body));
+  }),
+});
+
+http.route({
   path: "/internal/calendar/holds",
   method: "POST",
   handler: httpAction(async (ctx, request) => {

@@ -24,6 +24,14 @@ const memoryStatus = v.union(
 );
 
 export default defineSchema({
+  sessions: defineTable({
+    title: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_created_at", ["createdAt"])
+    .index("by_updated_at", ["updatedAt"]),
+
   messages: defineTable({
     direction: v.union(v.literal("inbound"), v.literal("outbound")),
     messageHandle: v.string(),
@@ -37,11 +45,13 @@ export default defineSchema({
     groupId: v.optional(v.string()),
     participants: v.array(v.string()),
     status: v.optional(v.string()),
+    sessionId: v.optional(v.id("sessions")),
     raw: v.any(),
     createdAt: v.number(),
   })
     .index("by_message_handle", ["messageHandle"])
-    .index("by_created_at", ["createdAt"]),
+    .index("by_created_at", ["createdAt"])
+    .index("by_session_id", ["sessionId", "createdAt"]),
 
   webhookEvents: defineTable({
     messageHandle: v.optional(v.string()),

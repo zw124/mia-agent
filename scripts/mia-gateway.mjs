@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createWriteStream, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -177,6 +177,20 @@ function spawnService({ name, command, args: serviceArgs, cwd = root, env = {} }
     log.end();
     logLine("gateway", `${name} ${line}`);
   });
+}
+
+function cleanDashboardDevCache() {
+  const nextDir = path.join(root, "apps", "dashboard", ".next");
+  if (!existsSync(nextDir)) return;
+  try {
+    rmSync(nextDir, { recursive: true, force: true });
+    logLine("dashboard", "cleared stale .next cache before starting dev server\n");
+  } catch (error) {
+    logLine(
+      "dashboard",
+      `could not clear stale .next cache: ${error instanceof Error ? error.message : String(error)}\n`,
+    );
+  }
 }
 
 function rememberService(spec) {
@@ -441,6 +455,7 @@ async function start() {
     if (await isPortOpen(dashboardPort)) {
       logLine("dashboard", `port ${dashboardPort} already listening; not starting duplicate\n`);
     } else {
+      cleanDashboardDevCache();
       spawnService(dashboardSpec);
     }
   }

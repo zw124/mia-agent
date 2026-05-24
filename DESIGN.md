@@ -1,86 +1,89 @@
 ---
-version: alpha
-name: Mia Agent Design System
-description: Stable design baton for Mia surfaces and generated product artifacts.
+version: opencode-dark-v1
+name: Mia Opencode Operator Design System
+description: Canonical visual guideline for all Mia app, desktop, dashboard, setup, and generated UI surfaces.
 colors:
-  background: "#0F0F0D"
-  surface: "#171714"
-  surfaceRaised: "#20201C"
-  text: "#F2F0EA"
-  muted: "#A5A29A"
-  border: "#34332D"
-  accent: "#F2F0EA"
-  success: "#4BA36A"
-  warning: "#C9933A"
-  danger: "#D35F5F"
+  background: "#0C0C0E"
+  surface: "#161618"
+  surfaceRaised: "#1C1C1F"
+  border: "#38383A"
+  borderMuted: "#2C2C2E"
+  text: "#F4F4F5"
+  textSecondary: "#C7C7CC"
+  textMuted: "#8E8E93"
+  textDim: "#68686F"
+  accent: "#DFF9A6"
+  danger: "#FF8F7A"
 typography:
-  display:
-    fontFamily: "Geist Sans"
-    fontSize: 56px
-    fontWeight: 520
-    lineHeight: 1.04
-  body:
-    fontFamily: "Geist Sans"
-    fontSize: 15px
-    fontWeight: 400
-    lineHeight: 1.55
   mono:
-    fontFamily: "Geist Mono"
-    fontSize: 13px
+    fontFamily: '"Berkeley Mono", "IBM Plex Mono", "SF Mono", SFMono-Regular, ui-monospace, monospace'
+    fontSize: 14px
     fontWeight: 400
-    lineHeight: 1.45
-rounded:
-  sm: 6px
-  md: 10px
-  lg: 16px
+    lineHeight: 1.65
+  small:
+    fontFamily: '"Berkeley Mono", "IBM Plex Mono", "SF Mono", SFMono-Regular, ui-monospace, monospace'
+    fontSize: 12px
+    fontWeight: 400
+    lineHeight: 1.5
+radius:
+  control: 6px
+  panel: 8px
 spacing:
-  xs: 6px
-  sm: 10px
-  md: 16px
-  lg: 28px
-  xl: 48px
-components:
-  button-primary:
-    backgroundColor: "{colors.accent}"
-    textColor: "#10100E"
-    rounded: "{rounded.lg}"
-    padding: 12px 18px
-  panel:
-    backgroundColor: "{colors.surface}"
-    borderColor: "{colors.border}"
-    rounded: "{rounded.lg}"
-  chat-input:
-    backgroundColor: "{colors.surfaceRaised}"
-    borderColor: "{colors.border}"
-    rounded: "{rounded.lg}"
+  xs: 4px
+  sm: 8px
+  md: 12px
+  lg: 18px
+  xl: 24px
 ---
 
-# Overview
+# Mia Visual Direction
 
-Mia design work should feel like a serious operator interface: quiet, dense, fast, and easy to understand. The default visual reference is Cursor-like restraint, not consumer SaaS decoration. Use visual hierarchy, spacing, typography, and state design instead of gradients, emojis, oversized cards, or generic AI-dashboard patterns.
+Mia uses an opencode-style operator interface: dark, compact, fast, mono-first, and intentionally quiet. The UI should feel like a serious local agent console, not a consumer SaaS dashboard, iMessage clone, glassmorphism app, or Manus-style landing page.
 
-# Colors
+# Core Rules
 
-Use neutrals as the system backbone. Accent color should usually be text/foreground contrast, not a loud brand color. Add a stronger accent only when the user gives a brand direction or the artifact type genuinely needs it.
+- Use the dark token set above for all app surfaces.
+- Use mono typography for chat, navigation, settings, startup screens, tool traces, and status text.
+- Use the real Mia logo from `apps/dashboard/public/mia-logo.png`; do not use blue dots or generic brand circles.
+- Prefer open layouts and text hierarchy over cards. Use panels only when a boundary is required.
+- Use 1px borders, no decorative shadows, no gradients, no glass, no oversized rounded cards.
+- Radius is limited to `6px` for controls and `8px` for panels.
+- Accent color is `#DFF9A6` and should be used sparingly for prompts, active states, and focus.
+- Do not use purple, bright blue brand dots, white splash screens, serif hero titles, or glossy enterprise styling.
 
-# Typography
+# Chat UI
 
-Prefer precise product typography with clear size ramps. Do not use default browser/system stacks unless matching an existing app. Use monospace only for code, logs, model/tool traces, identifiers, and terminal-like content.
+- User messages should read like terminal input: prefix with `>` in accent color.
+- Assistant messages should be plain text/Markdown on the dark background, not bubbles.
+- Markdown must render cleanly: paragraphs, lists, code, pre blocks, tables, links, and blockquotes.
+- Code blocks use dark raised panels with muted borders.
+- Composer is a compact dark input with a thin border and small send control.
+- Empty states should be short and calm, not marketing copy.
 
-# Layout
+# Thinking UI
 
-Design for high-signal workflows first: chat, setup, status, approvals, logs, memory, and tool traces. Desktop layouts should preserve density without feeling cramped. Mobile layouts should collapse into a single clear flow with sticky primary actions when needed.
+- Thinking state must be tiny and quiet: use lowercase `thinking`.
+- Do not show a large assistant placeholder saying “Mia is thinking”.
+- The thinking label uses 12px mono text in dim/muted color.
+- The spinner should be small and use the accent color.
+- Expanded thought logs should be compact, borderless, and aligned with the assistant message.
+- Completed state can read `completed (n steps)` in the same small style.
 
-# Components
+# Settings And Startup
 
-Core components are chat threads, composer, setup steps, status cards, approval gates, tool logs, data tables, and compact navigation. Each component needs loading, empty, error, disabled, and offline states when it can receive async data.
+- Login, setup, settings, and Electron startup screens must use the same opencode dark theme.
+- Startup screen should say what service is starting in direct language, using the Mia logo and compact panel.
+- Settings cards should be simple dark panels with 1px muted borders.
+- External integrations are optional relays; do not position Mia as iMessage-centered.
 
-# Interaction
+# Copy
 
-Interactions should be useful, not decorative. Prefer keyboard access, visible focus, compact hover states, inline validation, and clear pending states. Avoid motion that slows down agent workflows.
+- Use direct product language: “Mia”, “local runtime”, “agent service”, “message relay”, “settings”.
+- Avoid “control center”, “iMessage-first”, “beautiful glass”, “enterprise”, and other old positioning.
+- Error copy should say what failed and what to do next.
 
-# Do's And Don'ts
+# Non-Negotiables
 
-Do use tokens and repeated component rules instead of one-off styling. Do preserve existing product voice and structure during revisions unless the user asks for a redesign. Do verify contrast, responsive behavior, and real content density.
-
-Do not invent brand values from memory. Do not produce wireframes when the user asks for a finished product surface. Do not add glassmorphism, purple gradients, or playful decoration unless explicitly requested.
+- Future UI changes must preserve this style unless the user explicitly requests a new direction.
+- Any new app page must reuse the same tokens before adding new colors or visual effects.
+- If a component feels like a generic AI dashboard card, simplify it.

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, query } from "./_generated/server";
 
 const inboundPayload = v.object({
   accountEmail: v.optional(v.union(v.string(), v.null())),
@@ -43,7 +43,7 @@ export const recordWebhookEvent = internalMutation({
 });
 
 export const recordInbound = internalMutation({
-  args: { payload: inboundPayload },
+  args: { payload: inboundPayload, sessionId: v.optional(v.id("sessions")) },
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query("messages")
@@ -71,9 +71,15 @@ export const recordInbound = internalMutation({
       groupId: args.payload.group_id ?? undefined,
       participants: args.payload.participants,
       status: args.payload.status ?? undefined,
+      sessionId: args.sessionId,
       raw: args.payload,
       createdAt: Date.now(),
     });
+    if (args.sessionId) {
+      await ctx.db.patch(args.sessionId, {
+        updatedAt: Date.now(),
+      });
+    }
     return { accepted: true };
   },
 });
@@ -84,6 +90,7 @@ export const recordOutbound = internalMutation({
     toNumber: v.string(),
     content: v.string(),
     sendblueResponse: v.any(),
+    sessionId: v.optional(v.id("sessions")),
   },
   handler: async (ctx, args) => {
     const messageHandle =
@@ -98,9 +105,15 @@ export const recordOutbound = internalMutation({
       toNumber: args.toNumber,
       participants: [args.toNumber],
       status: args.sendblueResponse?.status,
+      sessionId: args.sessionId,
       raw: args.sendblueResponse,
       createdAt: Date.now(),
     });
+    if (args.sessionId) {
+      await ctx.db.patch(args.sessionId, {
+        updatedAt: Date.now(),
+      });
+    }
     return { ok: true };
   },
 });
@@ -116,6 +129,42 @@ export const recent = query({
   },
 });
 
+export const recentInternal = internalQuery({
+  args: {
+    limit: v.optional(v.number()),
+    participant: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const limit = Math.min(Math.max(args.limit ?? 12, 1), 40);
+    const rows = await ctx.db
+      .query("messages")
+      .withIndex("by_created_at")
+      .order("desc")
+      .take(limit * 3);
+
+    const participant = args.participant;
+    const filtered = participant
+      ? rows.filter((message) => {
+          return (
+            message.fromNumber === participant ||
+            message.toNumber === participant ||
+            message.participants.includes(participant)
+          );
+        })
+      : rows;
+
+    return filtered.slice(0, limit).map((message) => ({
+      direction: message.direction,
+      content: message.content,
+      fromNumber: message.fromNumber,
+      toNumber: message.toNumber,
+      messageHandle: message.messageHandle,
+      linkedMessageHandle: message.linkedMessageHandle,
+      createdAt: message.createdAt,
+    }));
+  },
+});
+
 export const recentWebhookEvents = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
@@ -124,5 +173,16 @@ export const recentWebhookEvents = query({
       .withIndex("by_created_at")
       .order("desc")
       .take(args.limit ?? 20);
+  },
+});
+
+export const bySession = query({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("messages")
+      .withIndex("by_session_id", (q) => q.eq("sessionId", args.sessionId))
+      .order("asc")
+      .collect();
   },
 });

@@ -52,7 +52,9 @@ def test_high_quality_computer_tools_are_registered() -> None:
     assert "computer_observe" in registry
     assert "computer_plan" in registry
     assert "computer_action_preview" in registry
+    assert "browser_task" in registry
     assert "workspace_status" in registry
     assert "workspace_diff" in registry
     assert "computer_observe" in OWNER_ONLY_TOOLS
+    assert "browser_task" in OWNER_ONLY_TOOLS
     assert "workspace_status" in OWNER_ONLY_TOOLS

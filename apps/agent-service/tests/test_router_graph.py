@@ -3,6 +3,7 @@ from typing import Any
 
 import pytest
 from langchain_core.messages import AIMessage
+from langchain_core.tools import StructuredTool
 
 from mia.graphs.coding_orchestra import run_coding_orchestra
 from mia.graphs.design_orchestra import run_design_orchestra
@@ -293,6 +294,76 @@ async def test_tool_task_allows_bounded_multi_step_loop(monkeypatch: pytest.Monk
 
 
 @pytest.mark.asyncio
+async def test_computer_tool_worker_gets_larger_budget_and_full_browser_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_llm = SequenceLlm([AIMessage(content="I only opened Wikipedia.")])
+    monkeypatch.setattr(router, "build_chat_model", lambda *_args, **_kwargs: fake_llm)
+
+    state = base_state()
+    state["message"] = "打开wikipedia 搜索algebra 点击最上面的选项"
+    result = await router.execute_tool_task(
+        state,
+        settings(),
+        ConvexSpy(),
+        task_name="wikipedia_search_algebra",
+        task_objective="Open Wikipedia, search algebra, confirm, and click the top result.",
+        allowed_tools=["browser_task"],
+        task_complexity="multi_step",
+    )
+
+    system_prompt = str(fake_llm.invocations[0][0].content)
+    assert "maximum of 14 tool-use round" in system_prompt
+    assert "click_screen" in system_prompt
+    assert "type_text" in system_prompt
+    assert "site='wikipedia', query='algebra'" in system_prompt
+    assert "did not use its assigned tools" in result
+
+
+@pytest.mark.asyncio
+async def test_computer_worker_does_not_mark_homepage_only_as_complete(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_browser_task(goal: str, site: str = "", query: str = "") -> str:
+        return "Opened: https://www.wikipedia.org\nGoal: Open Wikipedia website"
+
+    browser_tool = StructuredTool.from_function(
+        coroutine=fake_browser_task,
+        name="browser_task",
+        description="fake browser task",
+    )
+    fake_llm = SequenceLlm(
+        [
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "browser_task",
+                        "args": {"goal": "Open Wikipedia website", "site": "wikipedia"},
+                        "id": "call_browser",
+                    }
+                ],
+            ),
+            AIMessage(content="Done."),
+        ]
+    )
+    monkeypatch.setattr(router, "build_chat_model", lambda *_args, **_kwargs: fake_llm)
+
+    result = await router._run_tool_agent(
+        state=base_state(),
+        settings=settings(),
+        convex=ConvexSpy(),
+        node_name="wikipedia_search_algebra",
+        task_objective="Open Wikipedia, search algebra, confirm, and click the top result.",
+        tools=[browser_tool],
+        task_complexity="multi_step",
+    )
+
+    assert result["completed"] is False
+    assert "did not complete" in result["agent_result"]
+
+
+@pytest.mark.asyncio
 async def test_tool_task_must_use_assigned_tool(monkeypatch: pytest.MonkeyPatch) -> None:
     fake_llm = SequenceLlm([AIMessage(content="I did it without tools.")])
     monkeypatch.setattr(router, "build_chat_model", lambda *_args, **_kwargs: fake_llm)
@@ -462,7 +533,7 @@ async def test_design_orchestra_runs_bounded_design_specialists(
     first_prompt = str(fake_llm.invocations[0][-1].content)
     assert "Local user.md profile:" in first_prompt
     assert "Workspace DESIGN.md:" in first_prompt
-    assert "Mia Agent Design System" in first_prompt
+    assert "Mia Opencode Operator Design System" in first_prompt
     assert [thought["node"] for thought in convex.thoughts if "node" in thought] == [
         "design_orchestra.brief",
         "design_orchestra.brief",
@@ -502,4 +573,27 @@ async def test_owner_only_tools_allow_configured_telegram_owner(
         task_complexity="simple",
     )
 
+    assert "did not use its assigned tools" in result
+
+
+@pytest.mark.asyncio
+async def test_owner_only_tools_allow_web_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_llm = SequenceLlm([AIMessage(content="status ok")])
+    monkeypatch.setattr(router, "build_chat_model", lambda *_args, **_kwargs: fake_llm)
+    state = base_state()
+    state["from_number"] = "web-client"
+
+    result = await router.execute_tool_task(
+        state,
+        settings(),
+        ConvexSpy(),
+        task_name="desktop_worker",
+        task_objective="List desktop folders.",
+        allowed_tools=["list_directory"],
+        task_complexity="simple",
+    )
+
+    assert result != "I can't use owner-only tools from this sender."
     assert "did not use its assigned tools" in result

@@ -1,28 +1,50 @@
 # Mia Personal AI Agent
 
-Mia is a local-first personal AI agent controlled from iMessage, a web console, and a desktop companion. The current build focuses on a simple owner workflow: start the gateway, point SendBlue at the public agent URL, then talk to Mia from iMessage.
+Mia is a local-first personal AI agent controlled from a desktop chat app with optional web, Telegram, SendBlue, and connected-app integrations. The product path is intentionally simple: create an account, open the desktop app, sign in once, complete guided setup inside the app, then chat.
 
 ## Current Capabilities
 
-- Terminal-first onboarding with `npm run mia:onboard` or `mia-agent onboard`.
-- iMessage control through SendBlue inbound and outbound webhooks.
+- Product website with login/register, download entry point, guided setup, chat shell, status, integrations, usage, and device views.
+- Software-first onboarding: normal users configure Mia inside the app instead of editing env files or using terminal prompts.
+- Developer terminal onboarding with `npm run mia:onboard` or `mia-agent onboard` remains available for local servers and advanced setups.
+- Optional SendBlue relay for external inbound and outbound messages.
 - Telegram bot channel with webhook, owner allowlist, and shared approval flow.
 - Fast intent routing that chooses between direct reply, memory update, tool task, coding orchestra, and design orchestra.
 - AI-selected orchestration depth: Mia decides `brief`, `standard`, or `deep` based on task risk and complexity instead of always running a full loop.
-- Visible iMessage progress updates for longer tasks, so the user sees what Mia is doing instead of only a typing indicator.
+- Visible progress updates for longer tasks, so the user sees what Mia is doing instead of only a typing indicator.
 - Voice-message handling through SendBlue audio `media_url` plus OpenAI-compatible transcription.
 - DuckDuckGo web search fallback, with optional SearXNG if `SEARXNG_BASE_URL` is set.
 - Flexible Composio CLI tools for connected apps: auth check, link, search, schema, dry-run, execute, and scripted workflows after approval.
-- Computer-use tools for observation, safe planning, approval previews, screenshots, keyboard/mouse actions, app opening, shell-safe workspace status, text-to-speech, and owner-approved outbound iMessage.
+- Computer-use tools for observation, safe planning, approval previews, screenshots, keyboard/mouse actions, app opening, shell-safe workspace status, text-to-speech, and owner-approved outbound messages.
 - OpenClaw-style `user.md` profile loaded into agent prompts for stable owner preferences.
 - Open CoDesign-style `DESIGN.md` design-system baton loaded into design tasks.
 - Coding orchestra for software engineering, debugging, review, architecture, and agent-design work.
 - Design orchestra for UI, UX, product pages, dashboards, setup flows, chat interfaces, and visual-system work.
 - Convex-backed messages, runs, thought logs, agent spawns, memories, pending approvals, system health, and memory court.
-- Web dashboard scaffold for login, setup, status, and chat shell.
+- Web dashboard for login, setup, status, chat, channels, usage, and device visibility.
 - Desktop companion scaffold for macOS, Windows, and Linux.
 
 ## Quick Start
+
+### Normal User Flow
+
+Open the website or desktop app:
+
+```text
+http://localhost:3000
+```
+
+The intended user flow is:
+
+1. Register or sign in.
+2. Open the app dashboard.
+3. Follow the guided setup screens.
+4. Add a model key, connect the desktop app, and optionally connect Telegram, SendBlue, and Composio.
+5. Start chatting with Mia.
+
+The setup UI is the primary onboarding path. Terminal commands are for developers, deployment, and debugging.
+
+### Local Development
 
 Install dependencies:
 
@@ -30,7 +52,19 @@ Install dependencies:
 npm install
 ```
 
-Run terminal onboarding:
+Start the product website:
+
+```bash
+npm run dev:dashboard
+```
+
+Start the full local gateway when you need the agent service, Convex, and optional public webhook tunnel:
+
+```bash
+npm run mia:gateway:localtunnel
+```
+
+Run terminal onboarding only for developer/server setup:
 
 ```bash
 npm run mia:onboard
@@ -66,12 +100,6 @@ Or create env manually:
 
 ```bash
 cp .env.example .env.local
-```
-
-Start the full local gateway with a LocalTunnel public URL for SendBlue:
-
-```bash
-npm run mia:gateway:localtunnel
 ```
 
 The gateway manages:

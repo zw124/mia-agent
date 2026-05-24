@@ -1,508 +1,566 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Mia — Personal iMessage AI Agent</title>
-    <meta name="description" content="Mia is a personal iMessage AI agent with LangGraph routing, Convex memory, and a realtime dashboard." />
-    <meta property="og:title" content="Mia" />
-    <meta property="og:description" content="Personal iMessage AI agent. Route work, remember context, and create focused sub-agents." />
-    <meta property="og:type" content="website" />
-    <link rel="icon" href="assets/mia-logo.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet" />
-    <style>
-      /* ── Reset ── */
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mia — Local AI Agent</title>
+  <meta name="description" content="Mia is a local-first AI agent with chat, memory, tool calling, and computer-use workflows." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #F2EFE8;
+      --bg2: #EAE6DE;
+      --bg3: #E0DCCE;
+      --ink: #1A1916;
+      --ink2: #4A4840;
+      --ink3: #8A877E;
+      --line: rgba(26,25,22,0.12);
+      --line2: rgba(26,25,22,0.07);
+      --mono: 'Geist Mono', ui-monospace, monospace;
+      --serif: 'Instrument Serif', Georgia, serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--mono);
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
 
-      /* ── Tokens ── */
-      :root {
-        --bg:       #0a0a0a;
-        --side:     #111111;
-        --panel:    #141414;
-        --panel-2:  #1a1a1a;
-        --hover:    #1f1f1f;
-        --border:   #1f1f1f;
-        --border-2: #2a2a2a;
-        --text:     #b4b4b4;
-        --strong:   #e8e8e8;
-        --muted:    #6b6b6b;
-        --quiet:    #3a3a3a;
-        --accent:   #5c8df6;
-        --radius:   6px;
-        --radius-s: 4px;
-      }
+    /* NAV */
+    nav {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2.5rem;
+      height: 52px;
+      border-bottom: 1px solid var(--line);
+      background: var(--bg);
+    }
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.9rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .nav-links { display: flex; gap: 2rem; }
+    .nav-links a { font-size: 0.8rem; color: var(--ink3); letter-spacing: 0.02em; transition: color 0.15s; }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-right { display: flex; gap: 1rem; align-items: center; }
+    .nav-right a { font-size: 0.8rem; color: var(--ink3); letter-spacing: 0.02em; transition: color 0.15s; }
+    .nav-right a:hover { color: var(--ink); }
+    .btn-pill {
+      font-family: var(--mono);
+      font-size: 0.78rem; font-weight: 500;
+      padding: 0.4rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 99px;
+      background: var(--ink);
+      color: var(--bg);
+      cursor: pointer;
+      letter-spacing: 0.03em;
+      transition: opacity 0.15s;
+    }
+    .btn-pill:hover { opacity: 0.8; }
 
-      /* ── Base ── */
-      body {
-        background: var(--bg);
-        color: var(--text);
-        font-family: 'Geist', ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        font-size: 14px;
-        line-height: 1.6;
-        letter-spacing: -0.01em;
-        -webkit-font-smoothing: antialiased;
-      }
+    /* PIXEL LOGO */
+    .pixel-logo {
+      display: grid;
+      grid-template-columns: repeat(7, 5px);
+      grid-template-rows: repeat(5, 5px);
+      gap: 1px;
+    }
+    .px { width: 5px; height: 5px; background: var(--ink); }
+    .px-off { background: transparent; }
 
-      a { color: inherit; text-decoration: none; }
+    /* HERO */
+    .hero {
+      padding: 5rem 2.5rem 4rem;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: start;
+    }
+    .hero-left {}
+    .hero-tag {
+      font-size: 0.75rem; color: var(--ink3);
+      letter-spacing: 0.06em; text-transform: uppercase;
+      margin-bottom: 2.5rem;
+    }
+    .hero-title {
+      font-family: var(--serif);
+      font-size: clamp(3.2rem, 5vw, 5rem);
+      font-weight: 400;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      margin-bottom: 2rem;
+      color: var(--ink);
+    }
+    .hero-title em { font-style: italic; color: var(--ink2); }
+    .hero-desc {
+      font-size: 0.85rem;
+      line-height: 1.8;
+      color: var(--ink3);
+      max-width: 420px;
+      margin-bottom: 2.5rem;
+    }
+    .hero-actions { display: flex; gap: 1rem; align-items: center; }
+    .btn-main {
+      font-family: var(--mono);
+      font-size: 0.8rem; font-weight: 500;
+      padding: 0.6rem 1.4rem;
+      border-radius: 99px;
+      background: var(--ink);
+      color: var(--bg);
+      border: none; cursor: pointer;
+      letter-spacing: 0.03em;
+      transition: opacity 0.15s;
+    }
+    .btn-main:hover { opacity: 0.75; }
+    .btn-ghost {
+      font-family: var(--mono);
+      font-size: 0.8rem; color: var(--ink3);
+      letter-spacing: 0.02em;
+      transition: color 0.15s;
+    }
+    .btn-ghost:hover { color: var(--ink); }
 
-      /* ── Nav ── */
-      .nav {
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        height: 48px;
-        border-bottom: 1px solid var(--border);
-        background: rgba(10, 10, 10, 0.85);
-        backdrop-filter: blur(12px);
-        padding: 0 24px;
-      }
+    /* SOFTWARE HERO */
+    .hero-right { padding-top: 0.5rem; }
+    .app-preview {
+      background: var(--ink);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(26,25,22,0.25);
+      box-shadow: 0 26px 80px rgba(26,25,22,0.18);
+    }
+    .app-preview-bar {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      border-bottom: 1px solid rgba(242,239,232,0.08);
+    }
+    .window-dots { display: flex; gap: 6px; }
+    .term-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .term-dot.r { background: #FF5F57; }
+    .term-dot.y { background: #FFBD2E; }
+    .term-dot.g { background: #28C840; }
+    .app-preview-label { color: #7D7A72; font-size: 0.72rem; }
+    .app-preview-body {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      min-height: 360px;
+    }
+    .app-preview-side {
+      padding: 18px 12px;
+      border-right: 1px solid rgba(242,239,232,0.08);
+    }
+    .side-brand { color: #C8C4BA; font-size: 0.82rem; margin-bottom: 18px; }
+    .side-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 30px;
+      padding: 0 9px;
+      border-radius: 6px;
+      color: #7D7A72;
+      font-size: 0.72rem;
+    }
+    .side-row.active { background: #F2EFE8; color: var(--ink); }
+    .app-preview-main {
+      display: grid;
+      grid-template-rows: 44px 1fr 54px;
+      background:
+        linear-gradient(rgba(242,239,232,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(242,239,232,0.035) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    .app-tabs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 14px;
+      border-bottom: 1px solid rgba(242,239,232,0.08);
+      color: #7D7A72;
+      font-size: 0.72rem;
+    }
+    .app-tabs span:first-child { color: #C8C4BA; }
+    .chat-canvas {
+      align-self: center;
+      padding: 34px;
+    }
+    .chat-line {
+      color: #C8C4BA;
+      font-size: 0.92rem;
+      line-height: 1.7;
+      margin-bottom: 26px;
+    }
+    .chat-line strong { color: #D6D0C4; font-weight: 500; }
+    .trace {
+      position: relative;
+      display: grid;
+      gap: 12px;
+      padding-left: 24px;
+    }
+    .trace::before {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 3px;
+      bottom: 3px;
+      width: 1px;
+      background: rgba(242,239,232,0.14);
+    }
+    .trace-step { display: grid; gap: 3px; }
+    .trace-step::before {
+      content: "";
+      position: absolute;
+      left: 2px;
+      width: 7px;
+      height: 7px;
+      margin-top: 5px;
+      border-radius: 50%;
+      background: #6DB87B;
+    }
+    .trace-step b { color: #6DB87B; font-size: 0.7rem; font-weight: 500; }
+    .trace-step small { color: #7D7A72; font-size: 0.7rem; }
+    .composer-mock {
+      margin: 0 14px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 40px;
+      padding: 0 12px;
+      border: 1px solid rgba(242,239,232,0.12);
+      border-radius: 8px;
+      color: #7D7A72;
+      font-size: 0.75rem;
+    }
 
-      .brand {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--strong);
-        font-size: 13.5px;
-        font-weight: 500;
-        letter-spacing: -0.02em;
-      }
+    /* STAT ROW */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-bottom: 1px solid var(--line);
+    }
+    .stat-cell {
+      padding: 2rem 2.5rem;
+      border-right: 1px solid var(--line);
+    }
+    .stat-cell:last-child { border-right: none; }
+    .stat-num {
+      font-family: var(--serif);
+      font-size: 2.8rem;
+      font-weight: 400;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+    .stat-label { font-size: 0.78rem; color: var(--ink3); letter-spacing: 0.04em; }
 
-      .brand img {
-        width: 18px;
-        height: 18px;
-        border-radius: 4px;
-        object-fit: cover;
-      }
+    /* FEATURES */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-bottom: 1px solid var(--line);
+    }
+    .feat {
+      padding: 2.5rem 2rem;
+      border-right: 1px solid var(--line);
+    }
+    .feat:last-child { border-right: none; }
+    .feat-num { font-size: 0.72rem; color: var(--ink3); margin-bottom: 2rem; letter-spacing: 0.04em; }
+    .feat-title { font-family: var(--serif); font-size: 1.3rem; font-weight: 400; margin-bottom: 0.75rem; line-height: 1.2; }
+    .feat-desc { font-size: 0.78rem; color: var(--ink3); line-height: 1.75; }
 
-      .nav nav {
-        display: flex;
-        align-items: center;
-        gap: 2px;
-      }
+    /* COMPUTER USE */
+    .section-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid var(--line);
+    }
+    .split-copy {
+      padding: 4rem 2.5rem;
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .split-label { font-size: 0.72rem; color: var(--ink3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 1.5rem; }
+    .split-title { font-family: var(--serif); font-size: clamp(1.8rem, 2.5vw, 2.5rem); font-weight: 400; line-height: 1.1; margin-bottom: 1.25rem; }
+    .split-body { font-size: 0.82rem; color: var(--ink3); line-height: 1.8; max-width: 380px; }
+    .split-terminal {
+      padding: 3rem 2.5rem;
+      background: var(--bg2);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .term-sm {
+      width: 100%;
+      background: var(--ink);
+      border-radius: 6px;
+      padding: 1.25rem 1.5rem;
+      font-size: 0.78rem;
+      line-height: 2.1;
+      color: #7D7A72;
+    }
+    .term-sm .kw { color: #C8993A; }
+    .term-sm .arg { color: #C8C4BA; }
+    .term-sm .ok { color: #6DB87B; }
+    .term-sm .comment { color: #4A473E; }
 
-      .nav nav a {
-        display: flex;
-        align-items: center;
-        height: 28px;
-        border-radius: var(--radius-s);
-        color: var(--muted);
-        font-size: 13px;
-        padding: 0 10px;
-        transition: color 0.15s, background 0.15s;
-      }
+    /* STACK */
+    .section-stack {
+      padding: 4rem 2.5rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .stack-label { font-size: 0.72rem; color: var(--ink3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 3rem; }
+    .stack-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+      border-top: 1px solid var(--line);
+      border-left: 1px solid var(--line);
+    }
+    .stack-item {
+      padding: 1.25rem 2rem;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      font-size: 0.82rem;
+      color: var(--ink2);
+      letter-spacing: 0.02em;
+      transition: background 0.15s;
+    }
+    .stack-item:hover { background: var(--bg2); }
 
-      .nav nav a:hover {
-        color: var(--text);
-        background: var(--hover);
-      }
+    /* CTA */
+    .cta {
+      padding: 6rem 2.5rem;
+      text-align: center;
+      border-bottom: 1px solid var(--line);
+    }
+    .cta-title {
+      font-family: var(--serif);
+      font-size: clamp(2.5rem, 4vw, 4rem);
+      font-weight: 400;
+      margin-bottom: 1rem;
+      line-height: 1.1;
+    }
+    .cta-sub { font-size: 0.82rem; color: var(--ink3); margin-bottom: 2.5rem; }
+    .cta-actions { display: flex; gap: 1rem; justify-content: center; align-items: center; }
 
-      /* ── Hero ── */
-      .hero {
-        max-width: 680px;
-        margin: 0 auto;
-        padding: 96px 24px 80px;
-        text-align: center;
-      }
+    /* FOOTER */
+    footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem 2.5rem;
+      font-size: 0.75rem;
+      color: var(--ink3);
+    }
+    footer a { color: var(--ink3); }
+    footer a:hover { color: var(--ink); }
+    .footer-links { display: flex; gap: 1.5rem; }
 
-      .eyebrow {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        border: 1px solid var(--border-2);
-        border-radius: 999px;
-        background: var(--panel);
-        color: var(--muted);
-        font-size: 12px;
-        padding: 3px 12px;
-        margin-bottom: 28px;
-        letter-spacing: 0.01em;
-      }
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; gap: 3rem; }
+      .features { grid-template-columns: 1fr 1fr; }
+      .section-split { grid-template-columns: 1fr; }
+      .split-copy { border-right: none; border-bottom: 1px solid var(--line); }
+      .stats { grid-template-columns: 1fr; }
+      .stat-cell { border-right: none; border-bottom: 1px solid var(--line); }
+      nav { padding: 0 1.25rem; }
+      .nav-links { display: none; }
+      .hero { padding: 3rem 1.25rem 3rem; }
+      .split-copy, .split-terminal, .section-stack, .cta { padding-left: 1.25rem; padding-right: 1.25rem; }
+      .feat { padding: 2rem 1.25rem; }
+      .stat-cell { padding: 1.75rem 1.25rem; }
+    }
+  </style>
+</head>
+<body>
 
-      .eyebrow::before {
-        content: '';
-        width: 5px;
-        height: 5px;
-        border-radius: 999px;
-        background: var(--accent);
-      }
+<nav>
+  <a class="nav-brand" href="#top">
+    <!-- pixel M logo: 5 columns, 5 rows -->
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="0" y="0" width="4" height="4" fill="currentColor"/>
+      <rect x="8" y="0" width="4" height="4" fill="currentColor"/>
+      <rect x="16" y="0" width="4" height="4" fill="currentColor"/>
+      <rect x="0" y="5" width="4" height="4" fill="currentColor"/>
+      <rect x="6" y="5" width="4" height="4" fill="currentColor"/>
+      <rect x="10" y="5" width="4" height="4" fill="currentColor"/>
+      <rect x="16" y="5" width="4" height="4" fill="currentColor"/>
+      <rect x="0" y="10" width="4" height="4" fill="currentColor"/>
+      <rect x="16" y="10" width="4" height="4" fill="currentColor"/>
+      <rect x="0" y="15" width="4" height="4" fill="currentColor"/>
+      <rect x="16" y="15" width="4" height="4" fill="currentColor"/>
+    </svg>
+    Mia
+  </a>
+  <div class="nav-links">
+    <a href="#product">Product</a>
+    <a href="#computer-use">Computer use</a>
+    <a href="#stack">Stack</a>
+    <a href="https://github.com/zhiliao000-star/mia-agent" target="_blank" rel="noreferrer">GitHub</a>
+  </div>
+  <div class="nav-right">
+    <a href="/app" class="btn-pill">Open app →</a>
+  </div>
+</nav>
 
-      h1 {
-        color: var(--strong);
-        font-size: clamp(28px, 5vw, 44px);
-        font-weight: 500;
-        line-height: 1.15;
-        letter-spacing: -0.04em;
-        margin-bottom: 20px;
-      }
+<main id="top">
 
-      .lede {
-        color: var(--muted);
-        font-size: 15px;
-        line-height: 1.7;
-        max-width: 520px;
-        margin: 0 auto 36px;
-      }
-
-      .actions {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      .actions a {
-        display: inline-flex;
-        align-items: center;
-        height: 32px;
-        border-radius: var(--radius-s);
-        font-size: 13px;
-        font-weight: 500;
-        padding: 0 14px;
-        transition: background 0.15s, border-color 0.15s, color 0.15s;
-      }
-
-      .actions a:first-child {
-        border: 1px solid var(--border-2);
-        background: var(--panel-2);
-        color: var(--strong);
-      }
-
-      .actions a:first-child:hover {
-        background: var(--hover);
-      }
-
-      .actions a.secondary {
-        border: 1px solid var(--border);
-        background: transparent;
-        color: var(--muted);
-      }
-
-      .actions a.secondary:hover {
-        color: var(--text);
-        background: var(--hover);
-      }
-
-      /* ── Divider ── */
-      .divider {
-        height: 1px;
-        background: var(--border);
-        max-width: 1080px;
-        margin: 0 auto;
-      }
-
-      /* ── Sections ── */
-      .section {
-        max-width: 1080px;
-        margin: 0 auto;
-        padding: 72px 24px;
-      }
-
-      .section-label {
-        color: var(--muted);
-        font-size: 12px;
-        font-weight: 500;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        margin-bottom: 12px;
-      }
-
-      h2 {
-        color: var(--strong);
-        font-size: clamp(20px, 3vw, 28px);
-        font-weight: 500;
-        letter-spacing: -0.03em;
-        line-height: 1.25;
-        max-width: 480px;
-        margin-bottom: 48px;
-      }
-
-      /* ── Feature grid ── */
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 1px;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        overflow: hidden;
-        background: var(--border);
-      }
-
-      .grid article {
-        display: grid;
-        gap: 8px;
-        background: var(--panel);
-        padding: 20px;
-        transition: background 0.15s;
-      }
-
-      .grid article:hover {
-        background: var(--hover);
-      }
-
-      .grid article .num {
-        color: var(--quiet);
-        font-size: 11px;
-        font-weight: 500;
-        letter-spacing: 0.04em;
-        font-variant-numeric: tabular-nums;
-      }
-
-      .grid article h3 {
-        color: var(--strong);
-        font-size: 13.5px;
-        font-weight: 500;
-        letter-spacing: -0.02em;
-      }
-
-      .grid article p {
-        color: var(--muted);
-        font-size: 12.5px;
-        line-height: 1.65;
-      }
-
-      /* ── Stack section ── */
-      .split {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 48px;
-        align-items: start;
-      }
-
-      .split > div:first-child { padding-top: 4px; }
-
-      .stack-list {
-        list-style: none;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        overflow: hidden;
-      }
-
-      .stack-list li {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 16px;
-        border-bottom: 1px solid var(--border);
-        transition: background 0.12s;
-      }
-
-      .stack-list li:last-child { border-bottom: 0; }
-      .stack-list li:hover { background: var(--hover); }
-
-      .stack-list strong {
-        color: var(--strong);
-        font-size: 13px;
-        font-weight: 500;
-        min-width: 140px;
-      }
-
-      .stack-list span {
-        color: var(--muted);
-        font-size: 12.5px;
-      }
-
-      /* ── Run steps ── */
-      .run-steps {
-        display: grid;
-        gap: 1px;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        overflow: hidden;
-        background: var(--border);
-        max-width: 680px;
-      }
-
-      .step {
-        display: grid;
-        gap: 10px;
-        background: var(--panel);
-        padding: 18px 20px;
-      }
-
-      .step p {
-        color: var(--text);
-        font-size: 13px;
-      }
-
-      .step p code {
-        background: var(--panel-2);
-        border: 1px solid var(--border-2);
-        border-radius: 3px;
-        color: var(--strong);
-        padding: 1px 5px;
-        font-family: "GeistMono", "SFMono-Regular", Consolas, monospace;
-        font-size: 12px;
-      }
-
-      .step pre {
-        border: 1px solid var(--border);
-        border-radius: var(--radius-s);
-        background: var(--bg);
-        overflow-x: auto;
-      }
-
-      .step pre code {
-        display: block;
-        padding: 12px 14px;
-        color: var(--text);
-        font-family: "GeistMono", "SFMono-Regular", Consolas, monospace;
-        font-size: 12.5px;
-        line-height: 1.7;
-        letter-spacing: 0;
-        border: 0;
-        background: 0;
-        border-radius: 0;
-      }
-
-      /* ── Footer ── */
-      footer {
-        border-top: 1px solid var(--border);
-        padding: 24px;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        max-width: 1080px;
-        margin: 0 auto;
-      }
-
-      footer p {
-        color: var(--muted);
-        font-size: 12.5px;
-      }
-
-      /* ── Responsive ── */
-      @media (max-width: 720px) {
-        .split { grid-template-columns: 1fr; gap: 0; }
-        .split > div:first-child { margin-bottom: 32px; }
-        .nav nav { display: none; }
-      }
-    </style>
-  </head>
-  <body>
-    <header class="nav">
-      <a class="brand" href="#top" aria-label="Mia home">
-        <img src="assets/mia-logo.png" alt="" />
-        <span>Mia</span>
-      </a>
-      <nav aria-label="Page sections">
-        <a href="#system">System</a>
-        <a href="#stack">Stack</a>
-        <a href="#run">Get started</a>
-      </nav>
-    </header>
-
-    <main id="top">
-
-      <!-- Hero -->
-      <section class="hero">
-        <p class="eyebrow">Personal AI infrastructure</p>
-        <h1>An iMessage-native agent that thinks, remembers, and acts.</h1>
-        <p class="lede">
-          Mia routes your messages through LangGraph, stores memory in Convex,
-          and gives you a realtime dashboard to see everything happening.
-        </p>
-        <div class="actions">
-          <a href="https://github.com/zhiliao000-star/mia-agent/" target="_blank">View on GitHub</a>
-          <a href="https://discord.gg/G4F7URVuwF" target="_blank" class="secondary">Join Discord</a>
-        </div>
-      </section>
-
-      <div class="divider"></div>
-
-      <!-- System -->
-      <section id="system" class="section">
-        <p class="section-label">System</p>
-        <h2>Real agent infrastructure, not a chatbot wrapper.</h2>
-        <div class="grid">
-          <article>
-            <span class="num">01</span>
-            <h3>iMessage interface</h3>
-            <p>SendBlue webhooks receive inbound messages, dedupe events, and send replies back through iMessage.</p>
-          </article>
-          <article>
-            <span class="num">02</span>
-            <h3>Parent router</h3>
-            <p>LangGraph classifies intent and creates dynamic sub-agent specs with isolated tool access.</p>
-          </article>
-          <article>
-            <span class="num">03</span>
-            <h3>Memory system</h3>
-            <p>Convex stores short-term, long-term, and permanent memories with importance and decay metadata.</p>
-          </article>
-          <article>
-            <span class="num">04</span>
-            <h3>Memory Court</h3>
-            <p>A nightly workflow consolidates, challenges, and judges memory cleanup decisions with audit records.</p>
-          </article>
-          <article>
-            <span class="num">05</span>
-            <h3>Gateway</h3>
-            <p>A single local process starts the dashboard, Convex dev, and the Python agent service.</p>
-          </article>
-          <article>
-            <span class="num">06</span>
-            <h3>Dashboard</h3>
-            <p>A realtime Next.js interface shows agents, memory, events, automations, and setup state.</p>
-          </article>
-        </div>
-      </section>
-
-      <div class="divider"></div>
-
-      <!-- Stack -->
-      <section id="stack" class="section split">
-        <div>
-          <p class="section-label">Stack</p>
-          <h2>Open, provider-flexible, and designed for extension.</h2>
-        </div>
-        <ul class="stack-list">
-          <li><strong>LangGraph</strong><span>Agent state machines and routing</span></li>
-          <li><strong>FastAPI</strong><span>Webhook and internal service endpoints</span></li>
-          <li><strong>OpenAI-compatible LLMs</strong><span>Custom key, base URL, and model</span></li>
-          <li><strong>Convex</strong><span>Realtime storage, cron jobs, HTTP API</span></li>
-          <li><strong>SendBlue</strong><span>iMessage webhook and outbound delivery</span></li>
-          <li><strong>Next.js</strong><span>Setup flow and realtime operations dashboard</span></li>
-        </ul>
-      </section>
-
-      <div class="divider"></div>
-
-      <!-- Get started -->
-      <section id="run" class="section">
-        <p class="section-label">Get started</p>
-        <h2>Run Mia locally in three steps.</h2>
-        <div class="run-steps">
-          <div class="step">
-            <p>1. Clone the repo and install dependencies.</p>
-            <pre><code>git clone https://github.com/zhiliao000-star/mia-agent.git
-cd mia-agent
-npm install</code></pre>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-left">
+      <p class="hero-tag">Local AI agent / v0.1</p>
+      <h1 class="hero-title">Your AI<br><em>operating layer</em><br>for local work.</h1>
+      <p class="hero-desc">
+        Mia combines a web workspace, a local desktop runtime, persistent memory, tool calling, and full computer-use traces — all running on your machine.
+      </p>
+      <div class="hero-actions">
+        <a class="btn-main" href="/app">Launch Mia</a>
+        <a class="btn-ghost" href="#product">See how it works →</a>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="app-preview" aria-label="Mia software preview">
+        <div class="app-preview-bar">
+          <div class="window-dots">
+            <div class="term-dot r"></div>
+            <div class="term-dot y"></div>
+            <div class="term-dot g"></div>
           </div>
-          <div class="step">
-            <p>2. Copy <code>.env.example</code> to <code>.env.local</code> and fill in your keys.</p>
-            <pre><code>cp .env.example .env.local</code></pre>
-          </div>
-          <div class="step">
-            <p>3. Start all services with the Mia Gateway.</p>
-            <pre><code>npm run mia:gateway</code></pre>
+          <div class="app-preview-label">Mia workspace</div>
+        </div>
+        <div class="app-preview-body">
+          <aside class="app-preview-side">
+            <div class="side-brand">Mia</div>
+            <div class="side-row active"><span>Chat</span><small>live</small></div>
+            <div class="side-row"><span>History</span><small>12</small></div>
+            <div class="side-row"><span>Dashboard</span><small>ok</small></div>
+            <div class="side-row"><span>Settings</span><small>sync</small></div>
+          </aside>
+          <div class="app-preview-main">
+            <div class="app-tabs"><span>chat</span><span>agent trace</span><span>computer use</span></div>
+            <div class="chat-canvas">
+              <div class="chat-line"><strong>&gt;</strong> open Wikipedia, find linear algebra, summarize the top result</div>
+              <div class="trace">
+                <div class="trace-step"><b>browser_task</b><small>wikipedia search · linear algebra</small></div>
+                <div class="trace-step"><b>computer_observe</b><small>Safari · result page visible</small></div>
+                <div class="trace-step"><b>reply</b><small>summary ready with sources</small></div>
+              </div>
+            </div>
+            <div class="composer-mock"><span>Message Mia</span><span>↗</span></div>
           </div>
         </div>
-      </section>
+      </div>
+    </div>
+  </section>
 
-      <footer>
-        <a class="brand" href="#top" aria-label="Mia home">
-          <img src="assets/mia-logo.png" alt="" />
-          <span>Mia</span>
-        </a>
-        <p>A personal AI agent for iMessage.</p>
-      </footer>
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat-cell">
+      <div class="stat-num">6</div>
+      <div class="stat-label">agent event types</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">100%</div>
+      <div class="stat-label">runs locally, no telemetry</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">1 app</div>
+      <div class="stat-label">opens the full runtime</div>
+    </div>
+  </div>
 
-    </main>
-  </body>
+  <!-- FEATURES -->
+  <section id="product" class="features">
+    <div class="feat">
+      <div class="feat-num">01</div>
+      <h3 class="feat-title">Local agent runtime</h3>
+      <p class="feat-desc">Starts desktop app, dashboard, Python agent service, and health loop as one coordinated local system.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-num">02</div>
+      <h3 class="feat-title">Real tool traces</h3>
+      <p class="feat-desc">Every meaningful action is logged as a real agent event: route, tool call, tool result, completion, or failure.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-num">03</div>
+      <h3 class="feat-title">Memory with context</h3>
+      <p class="feat-desc">Recent conversation context and useful memories are loaded before routing, keeping follow-ups grounded.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-num">04</div>
+      <h3 class="feat-title">Computer use surface</h3>
+      <p class="feat-desc">Observe screen, open browser targets, request clicks, type text, press keys — all with an audited trace.</p>
+    </div>
+  </section>
+
+  <!-- COMPUTER USE -->
+  <section id="computer-use" class="section-split">
+    <div class="split-copy">
+      <div class="split-label">Computer use</div>
+      <h2 class="split-title">Every action,<br>fully visible.</h2>
+      <p class="split-body">
+        Mia records observation, browser navigation, clicks, text entry, key presses, and scrolls as first-class events. Nothing happens off-trace. You always know what your agent did.
+      </p>
+    </div>
+    <div class="split-terminal">
+      <div class="term-sm">
+        <div><span class="kw">computer_observe</span> <span class="arg">--init</span></div>
+        <div class="comment">→ screen captured 1440×900</div>
+        <div>&nbsp;</div>
+        <div><span class="kw">browser_task</span> <span class="arg">wikipedia "linear algebra"</span></div>
+        <div class="comment">→ navigated to top result</div>
+        <div>&nbsp;</div>
+        <div><span class="kw">click_screen</span> <span class="arg">x=512 y=318</span></div>
+        <div class="ok">→ Tool Result: section expanded</div>
+        <div>&nbsp;</div>
+        <div><span class="kw">key_press</span> <span class="arg">cmd+a</span></div>
+        <div class="ok">→ Tool Result: text selected</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STACK -->
+  <section id="stack" class="section-stack">
+    <div class="stack-label">Built on</div>
+    <div class="stack-items">
+      <div class="stack-item">Electron</div>
+      <div class="stack-item">Next.js</div>
+      <div class="stack-item">FastAPI</div>
+      <div class="stack-item">LangGraph</div>
+      <div class="stack-item">Convex</div>
+      <div class="stack-item">macOS Native Tools</div>
+      <div class="stack-item">Python 3.11+</div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <h2 class="cta-title">Ship the app,<br><em style="font-style: italic; color: var(--ink2);">not the terminal.</em></h2>
+    <p class="cta-sub">Sign in from the browser, configure providers in your workspace,<br>and let the desktop app run the local agent reliably.</p>
+    <div class="cta-actions">
+      <a class="btn-main" href="/app">Open Mia workspace</a>
+      <a class="btn-ghost" href="https://github.com/zhiliao000-star/mia-agent" target="_blank" rel="noreferrer">Star on GitHub →</a>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span>© 2026 Mia</span>
+  <div class="footer-links">
+    <a href="https://github.com/zhiliao000-star/mia-agent" target="_blank" rel="noreferrer">GitHub</a>
+    <a href="#product">Docs</a>
+    <a href="#">Privacy</a>
+  </div>
+</footer>
+
+</body>
 </html>
