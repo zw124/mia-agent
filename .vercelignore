@@ -1,0 +1,14 @@
+.git
+.mia
+.venv
+.ruff_cache
+node_modules
+apps/**/.next
+apps/**/.env
+apps/**/.env.local
+apps/desktop/release
+apps/dashboard/public/downloads
+*.log
+*.tsbuildinfo
+__pycache__
+*.pyc
