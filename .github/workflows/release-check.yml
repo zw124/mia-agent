@@ -1,0 +1,19 @@
+name: Release Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  release-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure release governance files exist
+        run: |
+          test -f CHANGELOG.md
+          test -f LICENSE
+          test -f COMMERCIAL-LICENSE.md
+          test -f CLA.md
+          test -f SECURITY.md
+          test -f NOTICE

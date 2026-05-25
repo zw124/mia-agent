@@ -8,7 +8,7 @@ def test_load_design_context_reads_root_design_md(monkeypatch) -> None:
     root_design = Path(__file__).resolve().parents[3] / "DESIGN.md"
 
     assert design_context.DESIGN_CONTEXT_PATH == root_design
-    assert "Mia Agent Design System" in design_context.load_design_context()
+    assert "Mia Opencode Operator Design System" in design_context.load_design_context()
 
 
 def test_load_design_context_handles_missing_file(monkeypatch, tmp_path) -> None:

@@ -1,0 +1,30 @@
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "*.md"
+
+frontend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "apps/dashboard/**"
+          - "website/**"
+
+desktop:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "apps/desktop/**"
+
+backend:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "apps/agent-service/**"
+          - "convex/**"
+          - "scripts/**"
+
+security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "SECURITY.md"
+          - ".github/workflows/codeql.yml"
+          - "docs/SECURITY_MODEL.md"

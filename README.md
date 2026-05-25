@@ -1,187 +1,147 @@
-# Mia Personal AI Agent
+# Mia
 
-Mia is a local-first personal AI agent controlled from a desktop chat app with optional web, Telegram, SendBlue, and connected-app integrations. The product path is intentionally simple: create an account, open the desktop app, sign in once, complete guided setup inside the app, then chat.
+> A desktop-first personal AI agent with chat, memory, tool execution, and local computer control.
 
-## Current Capabilities
+[Website](https://mia-agent-one.vercel.app) · [Desktop Release](https://github.com/zw124/mia-agent/releases/tag/v0.1.0) · [Documentation](./docs) · [Contributing](./CONTRIBUTING.md) · [Commercial Licensing](./COMMERCIAL-LICENSE.md)
 
-- Product website with login/register, download entry point, guided setup, chat shell, status, integrations, usage, and device views.
-- Software-first onboarding: normal users configure Mia inside the app instead of editing env files or using terminal prompts.
-- Developer terminal onboarding with `npm run mia:onboard` or `mia-agent onboard` remains available for local servers and advanced setups.
-- Optional SendBlue relay for external inbound and outbound messages.
-- Telegram bot channel with webhook, owner allowlist, and shared approval flow.
-- Fast intent routing that chooses between direct reply, memory update, tool task, coding orchestra, and design orchestra.
-- AI-selected orchestration depth: Mia decides `brief`, `standard`, or `deep` based on task risk and complexity instead of always running a full loop.
-- Visible progress updates for longer tasks, so the user sees what Mia is doing instead of only a typing indicator.
-- Voice-message handling through SendBlue audio `media_url` plus OpenAI-compatible transcription.
-- DuckDuckGo web search fallback, with optional SearXNG if `SEARXNG_BASE_URL` is set.
-- Flexible Composio CLI tools for connected apps: auth check, link, search, schema, dry-run, execute, and scripted workflows after approval.
-- Computer-use tools for observation, safe planning, approval previews, screenshots, keyboard/mouse actions, app opening, shell-safe workspace status, text-to-speech, and owner-approved outbound messages.
-- OpenClaw-style `user.md` profile loaded into agent prompts for stable owner preferences.
-- Open CoDesign-style `DESIGN.md` design-system baton loaded into design tasks.
-- Coding orchestra for software engineering, debugging, review, architecture, and agent-design work.
-- Design orchestra for UI, UX, product pages, dashboards, setup flows, chat interfaces, and visual-system work.
-- Convex-backed messages, runs, thought logs, agent spawns, memories, pending approvals, system health, and memory court.
-- Web dashboard for login, setup, status, chat, channels, usage, and device visibility.
-- Desktop companion scaffold for macOS, Windows, and Linux.
+## Overview
 
-## Quick Start
+Mia is an AI agent product, not just a chat box.
 
-### Normal User Flow
+It combines:
 
-Open the website or desktop app:
+- a Next.js web app;
+- an Electron desktop app;
+- a Python agent runtime;
+- backend state for sessions, memories, runs, and thought logs;
+- visible tool execution for browser and computer-use workflows.
+
+The product goal is simple: a user should be able to sign in, complete onboarding, open the desktop app, and then interact with the same agent through a product interface instead of raw terminal commands.
+
+## Table of contents
+
+- [Why Mia](#why-mia)
+- [Core capabilities](#core-capabilities)
+- [Architecture](#architecture)
+- [Getting started](#getting-started)
+- [Environment](#environment)
+- [Development](#development)
+- [Releases](#releases)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [Security](#security)
+- [License](#license)
+
+## Why Mia
+
+Most AI products stop at text generation. Mia is built around execution, continuity, and visibility.
+
+Key differences:
+
+- desktop-first interaction instead of browser-only chat;
+- session and memory continuity across runs;
+- visible tool traces instead of opaque background actions;
+- approval-oriented workflows for higher-trust tasks;
+- support for local runtime control and computer-use scenarios.
+
+## Core capabilities
+
+- Desktop-first chat product with a web companion interface
+- Guided onboarding and setup flow
+- Session-aware chat with memory and thought logging
+- Tool routing for search, browser tasks, and computer-use actions
+- Agent room visualization for runtime state
+- Optional integrations such as Telegram, SendBlue, and connected-app tooling
+- Local runtime orchestration for dashboard, agent service, and backend state
+- Desktop packaging and release flow
+
+## Architecture
 
 ```text
-http://localhost:3000
+apps/dashboard      Next.js web app
+apps/desktop        Electron desktop app
+apps/agent-service  Python agent runtime
+convex              Backend state and functions
+website             Product-facing web assets
+scripts             Local runtime and build scripts
+docs                Architecture, process, and governance docs
 ```
 
-The intended user flow is:
+See [docs/ARCHITECTURE_OVERVIEW.md](./docs/ARCHITECTURE_OVERVIEW.md) for the longer version.
 
-1. Register or sign in.
-2. Open the app dashboard.
-3. Follow the guided setup screens.
-4. Add a model key, connect the desktop app, and optionally connect Telegram, SendBlue, and Composio.
-5. Start chatting with Mia.
+## Getting started
 
-The setup UI is the primary onboarding path. Terminal commands are for developers, deployment, and debugging.
+### For users
 
-### Local Development
+- Product website: [mia-agent-one.vercel.app](https://mia-agent-one.vercel.app)
+- macOS desktop download: [Mia 0.1.0](https://github.com/zw124/mia-agent/releases/download/v0.1.0/Mia-0.1.0-arm64.dmg)
 
-Install dependencies:
+Current desktop release note:
+
+- the macOS build is unsigned for testing;
+- production notarization and Developer ID signing are still pending.
+
+### For developers
+
+#### 1. Install dependencies
 
 ```bash
 npm install
+python -m venv .venv
+. .venv/bin/activate
+pip install -e "apps/agent-service[dev]"
 ```
 
-Start the product website:
+#### 2. Configure environment
 
-```bash
-npm run dev:dashboard
-```
-
-Start the full local gateway when you need the agent service, Convex, and optional public webhook tunnel:
-
-```bash
-npm run mia:gateway:localtunnel
-```
-
-Run terminal onboarding only for developer/server setup:
-
-```bash
-npm run mia:onboard
-```
-
-Python package path:
-
-```bash
-cd apps/agent-service
-pipx install .
-mia-agent onboard
-mia-agent serve
-```
-
-After PyPI publishing:
-
-```bash
-pipx install mia-agent
-mia-agent onboard
-mia-agent serve
-```
-
-For development without `pipx`:
-
-```bash
-cd apps/agent-service
-pip install -e .
-mia-agent doctor --env ../../.env.local
-mia-agent serve --env ../../.env.local
-```
-
-Or create env manually:
+Use the sample environment file as the starting point:
 
 ```bash
 cp .env.example .env.local
 ```
 
-The gateway manages:
+At minimum, review these values:
 
-- Dashboard: `http://localhost:3000`
-- Agent service: `http://localhost:8000/health`
-- Convex dev service
-- Optional public tunnel for SendBlue webhooks
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`
+- `MODEL_NAME`
+- `NEXT_PUBLIC_CONVEX_URL`
+- `AGENT_SERVICE_URL`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-If you only want dashboard plus Convex:
+#### 3. Start the product
 
-```bash
-npm run dev
-```
-
-## SendBlue iMessage Setup
-
-Set these in `.env.local`:
+Desktop product flow:
 
 ```bash
-SENDBLUE_API_KEY_ID=
-SENDBLUE_API_SECRET_KEY=
-SENDBLUE_FROM_NUMBER=
-OWNER_PHONE_NUMBER=
+npm run desktop:dev
 ```
 
-Set the SendBlue inbound webhook URL to:
+Web app only:
 
-```text
-https://YOUR_PUBLIC_AGENT_URL/webhooks/sendblue/receive
+```bash
+npm run dev:dashboard
 ```
 
-For localtunnel, `YOUR_PUBLIC_AGENT_URL` is the URL printed by:
+Broader local gateway flow:
 
 ```bash
 npm run mia:gateway:localtunnel
 ```
 
-If you set `SENDBLUE_WEBHOOK_SECRET`, configure the same signing secret in SendBlue.
+#### 4. Open the app
 
-## Telegram Setup
-
-Create a Telegram bot with `@BotFather`, then run:
-
-```bash
-npm run mia:onboard
-```
-
-Choose Telegram and paste the bot token. The onboarder writes:
-
-```bash
-TELEGRAM_BOT_TOKEN=
-TELEGRAM_WEBHOOK_SECRET=
-TELEGRAM_OWNER_CHAT_ID=
-TELEGRAM_ALLOWED_CHAT_IDS=
-```
-
-Telegram inbound webhook:
+During local development, the main web entry point is:
 
 ```text
-https://YOUR_PUBLIC_AGENT_URL/webhooks/telegram/receive
+http://localhost:3000
 ```
 
-Set the webhook:
+## Environment
 
-```bash
-curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
-  -H 'content-type: application/json' \
-  -d '{"url":"https://YOUR_PUBLIC_AGENT_URL/webhooks/telegram/receive","secret_token":"YOUR_TELEGRAM_WEBHOOK_SECRET"}'
-```
-
-Access policy is fail-closed when `TELEGRAM_ALLOWED_CHAT_IDS` or `TELEGRAM_OWNER_CHAT_ID` is set. Approvals from Telegram use the same `approve` command as iMessage.
-
-To find your Telegram chat ID, DM your bot once and inspect the gateway logs or Telegram `getUpdates`:
-
-```bash
-curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getUpdates"
-```
-
-## Environment Variables
-
-Core model:
+### Core model
 
 ```bash
 OPENAI_API_KEY=
@@ -190,7 +150,7 @@ MODEL_NAME=gpt-4o-mini
 TRANSCRIPTION_MODEL=whisper-1
 ```
 
-Convex and service URLs:
+### Backend and runtime
 
 ```bash
 CONVEX_URL=
@@ -200,7 +160,23 @@ AGENT_SERVICE_URL=http://localhost:8000
 MIA_INTERNAL_SECRET=change-me
 ```
 
-SendBlue:
+### Supabase
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+```
+
+### Web auth
+
+```bash
+MIA_WEB_ADMIN_EMAIL=owner@mia.local
+MIA_WEB_ADMIN_PASSWORD=mia-local-admin
+MIA_WEB_AUTH_SECRET=change-this-before-deploy
+```
+
+### Optional integrations
 
 ```bash
 SENDBLUE_API_KEY_ID=
@@ -213,222 +189,98 @@ TELEGRAM_BOT_TOKEN=
 TELEGRAM_WEBHOOK_SECRET=
 TELEGRAM_OWNER_CHAT_ID=
 TELEGRAM_ALLOWED_CHAT_IDS=
-```
-
-Search:
-
-```bash
 SEARXNG_BASE_URL=
 COMPOSIO_ENABLED=false
 ```
 
-If `SEARXNG_BASE_URL` is empty, Mia uses DuckDuckGo HTML search fallback.
+## Development
 
-Web login:
-
-```bash
-MIA_WEB_ADMIN_EMAIL=owner@mia.local
-MIA_WEB_ADMIN_PASSWORD=mia-local-admin
-MIA_WEB_AUTH_SECRET=change-this-before-deploy
-```
-
-Change the web login values before deployment.
-
-## Agent Routing
-
-Mia starts every message with a parent router. The router chooses one mode:
-
-- `fast_reply`: simple direct answer.
-- `memory_update`: store a durable preference, fact, task, relationship, or project detail.
-- `tool_task`: bounded tool use for search, computer actions, calendar, workspace status, or outbound iMessage.
-- `coding_orchestra`: bounded specialist flow for programming and agent work.
-- `design_orchestra`: bounded specialist flow for product/UI/design work.
-
-For orchestra tasks, the router also chooses:
-
-- `brief`: smallest specialist path.
-- `standard`: useful quality without slow full review.
-- `deep`: full specialist pass for high-stakes, ambiguous, broad, or production-grade requests.
-
-This avoids the old problem where every task ran a full loop even when the user asked a simple question.
-
-## Progress And Voice
-
-For longer iMessage tasks, Mia can send short progress messages before the final answer. This makes the agent feel active instead of only showing the native typing indicator.
-
-Voice flow:
-
-1. User sends an audio iMessage.
-2. SendBlue includes an audio `media_url` in the webhook.
-3. Mia downloads the media and calls the OpenAI-compatible transcription endpoint.
-4. Mia replies with the recognized text and then handles it like a normal message.
-
-Voice requires:
+Main commands:
 
 ```bash
-OPENAI_API_KEY=
-OPENAI_BASE_URL=
-TRANSCRIPTION_MODEL=whisper-1
-```
-
-## Memory And Design Context
-
-`user.md` is the stable owner profile. Use it for durable preferences that should shape all replies.
-
-`DESIGN.md` is the design-system baton. Use it for stable UI/design choices such as typography, colors, spacing, component states, and do/don't rules.
-
-These files are read by the agent service and injected into relevant prompts. They are intentionally plain Markdown so they can be edited by hand.
-
-## Computer Use
-
-Computer-use tools are staged for safety:
-
-- Observe first with screenshot/app context.
-- Plan before action for non-trivial UI control.
-- Preview risk before clicks, typing, app control, shell, or outbound iMessage.
-- Require owner-only access for sensitive local operations.
-- Use pending approval for actions that should not execute silently.
-
-Useful owner commands over iMessage:
-
-```text
-approve
-auto approve
-stop auto approve
-```
-
-The same `approve` command works from Telegram when the sender is the configured `TELEGRAM_OWNER_CHAT_ID`.
-
-## Composio
-
-Mia includes a flexible Composio tool surface:
-
-- `composio_search`: search for tool slugs by natural language.
-- `composio_whoami`: check CLI login status.
-- `composio_link`: connect a toolkit account such as Gmail, GitHub, Slack, or Google Calendar.
-- `composio_schema`: inspect the required payload for a tool slug.
-- `composio_dry_run`: validate a payload without performing the action.
-- `composio_execute`: request approval, then execute a tool slug with JSON payload.
-- `composio_run`: request approval, then run an inline Composio JavaScript workflow for multi-tool tasks.
-
-Enable it during onboarding or set:
-
-```bash
-COMPOSIO_ENABLED=true
-```
-
-Then authenticate Composio in the same shell/user environment:
-
-```bash
-composio login
-```
-
-Expected agent flow:
-
-```text
-composio_whoami -> composio_search -> composio_link if needed -> composio_schema -> composio_dry_run -> composio_execute
-```
-
-For multi-step connected-app work, Mia can use `composio_run` after approval. Execution is approval-gated because Composio tools can touch external accounts such as Gmail, GitHub, Slack, calendars, and CRMs.
-
-## Useful Commands
-
-```bash
-npm run mia:gateway
+npm run typecheck
+npm run build
+npm run test
+npm run desktop:dev
 npm run mia:onboard
 npm run mia:gateway:localtunnel
-npm run mia:gateway:ngrok
-npm run dev
-npm run dev:dashboard
-npm run dev:convex
-npm run desktop:dev
-npm run desktop:package
+```
+
+Before opening a pull request, run:
+
+```bash
 npm run typecheck
-npm run test:python
-npm test
+npm run build
+npm run test
 ```
 
-Python package commands:
+Read these before contributing:
 
-```bash
-mia-agent onboard
-mia-agent doctor
-mia-agent serve --host 127.0.0.1 --port 8000
-```
+- [CONTRIBUTING.md](./CONTRIBUTING.md)
+- [CODING_STANDARDS.md](./CODING_STANDARDS.md)
+- [DEVELOPMENT.md](./DEVELOPMENT.md)
+- [TESTING.md](./TESTING.md)
+- [SECURITY.md](./SECURITY.md)
 
-Python-only checks:
+## Releases
 
-```bash
-cd apps/agent-service
-pytest -q
-ruff check .
-```
+Current public desktop release:
 
-From the repo root with the local venv:
+- [GitHub Release v0.1.0](https://github.com/zw124/mia-agent/releases/tag/v0.1.0)
 
-```bash
-/Users/zw00/Desktop/mia-agent/.venv/bin/pytest -q apps/agent-service
-/Users/zw00/Desktop/mia-agent/.venv/bin/ruff check apps/agent-service
-```
+Release process documentation:
 
-## Deployment Shape
+- [docs/RELEASE_PROCESS.md](./docs/RELEASE_PROCESS.md)
 
-Deploy `apps/dashboard` as the web control center. The deployed web app owns login, status, setup, and dashboard UI. The desktop companion logs into the same web console and starts the local gateway for computer control. SendBlue points inbound iMessage webhooks at the public agent service URL.
+## Documentation
 
-For production:
+Project and governance documentation lives under [`docs/`](./docs).
 
-- Use HTTPS for `AGENT_SERVICE_URL`, `CONVEX_SITE_URL`, and webhook URLs.
-- Use strong `MIA_INTERNAL_SECRET` and `MIA_WEB_AUTH_SECRET`.
-- Rotate exposed SendBlue/OpenAI credentials.
-- Keep `OWNER_PHONE_NUMBER` set so sensitive tools are owner-gated.
+Recommended starting points:
 
-## PyPI Release
+- [Architecture Overview](./docs/ARCHITECTURE_OVERVIEW.md)
+- [Local Setup](./docs/LOCAL_SETUP.md)
+- [API Contracts](./docs/API_CONTRACTS.md)
+- [Security Model](./docs/SECURITY_MODEL.md)
+- [Commercial Model](./docs/COMMERCIAL_MODEL.md)
+- [Maintainer Guide](./docs/MAINTAINER_GUIDE.md)
 
-The Python package lives in `apps/agent-service` and publishes the `mia-agent` CLI.
+## Contributing
 
-Package name:
+Contributions are welcome, but this repository has explicit legal and governance rules.
 
-```text
-mia-agent
-```
+- Community source is licensed under `AGPL-3.0-only`
+- Commercial use is available under a separate license
+- Contributors are expected to follow the CLA process
 
-Local build check:
+Read:
 
-```bash
-cd apps/agent-service
-python -m pip install build
-python -m build
-```
+- [CLA.md](./CLA.md)
+- [COMMERCIAL-LICENSE.md](./COMMERCIAL-LICENSE.md)
+- [CONTRIBUTING.md](./CONTRIBUTING.md)
 
-GitHub Actions workflow:
+## Security
 
-```text
-.github/workflows/publish-pypi.yml
-```
+Do not report vulnerabilities through public issues.
 
-Recommended publishing path is PyPI Trusted Publishing, not a long-lived API token. Configure PyPI once with:
-
-```text
-Owner/repository: zw124/mia-agent
-Workflow name: publish-pypi.yml
-Environment name: pypi
-Package name: mia-agent
-```
-
-Then publish by creating a GitHub Release or manually running the workflow.
-
-## Project Layout
-
-```text
-apps/agent-service   FastAPI agent service, router, tools, orchestras
-apps/dashboard       Next.js web console
-apps/desktop         Electron desktop companion scaffold
-convex               Convex schema, HTTP actions, messages, memory, logs
-scripts              Gateway and launch-agent scripts
-user.md              Owner profile
-DESIGN.md            Design-system baton
-```
+Use the private reporting path described in [SECURITY.md](./SECURITY.md).
 
 ## License
 
-See `LICENSE`.
+This repository is licensed under:
+
+```text
+GNU Affero General Public License v3.0 only
+SPDX-License-Identifier: AGPL-3.0-only
+```
+
+See [LICENSE](./LICENSE).
+
+If you need proprietary distribution, private deployment rights, or commercial support terms, see [COMMERCIAL-LICENSE.md](./COMMERCIAL-LICENSE.md).
+
+## Third-party notices
+
+Third-party bundled assets and notices are documented in:
+
+- [NOTICE](./NOTICE)
+- [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)

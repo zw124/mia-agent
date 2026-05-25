@@ -1,0 +1,22 @@
+name: Integration request
+description: Propose a new provider, plugin, or external system integration
+title: "[Integration]: "
+labels: ["integration"]
+body:
+  - type: input
+    id: system
+    attributes:
+      label: Integration target
+    validations:
+      required: true
+  - type: textarea
+    id: usecase
+    attributes:
+      label: Use case
+    validations:
+      required: true
+  - type: textarea
+    id: security
+    attributes:
+      label: Security and approval considerations
+      description: Describe tokens, scopes, data movement, and approval constraints
