@@ -1,5 +1,7 @@
 # Mia
 
+![Mia banner](./assets/github-banner.svg)
+
 > A desktop-first personal AI agent with chat, memory, tool execution, and local computer control.
 
 [Website](https://mia-agent-one.vercel.app) · [Desktop Release](https://github.com/zw124/mia-agent/releases/tag/v0.1.0) · [Documentation](./docs) · [Contributing](./CONTRIBUTING.md) · [Commercial Licensing](./COMMERCIAL-LICENSE.md)
@@ -27,6 +29,7 @@ The product goal is simple: a user should be able to sign in, complete onboardin
 - [Environment](#environment)
 - [Development](#development)
 - [Releases](#releases)
+- [Privacy and local profile](#privacy-and-local-profile)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
 - [Security](#security)
@@ -98,6 +101,7 @@ Use the sample environment file as the starting point:
 
 ```bash
 cp .env.example .env.local
+cp user.example.md user.local.md
 ```
 
 At minimum, review these values:
@@ -189,98 +193,83 @@ TELEGRAM_BOT_TOKEN=
 TELEGRAM_WEBHOOK_SECRET=
 TELEGRAM_OWNER_CHAT_ID=
 TELEGRAM_ALLOWED_CHAT_IDS=
-SEARXNG_BASE_URL=
-COMPOSIO_ENABLED=false
 ```
+
+See [DEVELOPMENT.md](./DEVELOPMENT.md) and [docs/LOCAL_SETUP.md](./docs/LOCAL_SETUP.md) for a more complete setup walkthrough.
 
 ## Development
 
-Main commands:
+Common commands:
 
 ```bash
-npm run typecheck
 npm run build
-npm run test
-npm run desktop:dev
-npm run mia:onboard
-npm run mia:gateway:localtunnel
+npm run typecheck
+npm run lint
+pytest -q
 ```
 
-Before opening a pull request, run:
+Desktop packaging:
 
 ```bash
-npm run typecheck
-npm run build
-npm run test
+npm run package:mac --workspace apps/desktop
 ```
 
-Read these before contributing:
+Before opening a PR, review:
 
 - [CONTRIBUTING.md](./CONTRIBUTING.md)
 - [CODING_STANDARDS.md](./CODING_STANDARDS.md)
-- [DEVELOPMENT.md](./DEVELOPMENT.md)
 - [TESTING.md](./TESTING.md)
-- [SECURITY.md](./SECURITY.md)
 
 ## Releases
 
-Current public desktop release:
+The current public desktop artifact is published from GitHub Releases.
 
-- [GitHub Release v0.1.0](https://github.com/zw124/mia-agent/releases/tag/v0.1.0)
+- Release page: [v0.1.0](https://github.com/zw124/mia-agent/releases/tag/v0.1.0)
+- Production site: [mia-agent-one.vercel.app](https://mia-agent-one.vercel.app)
 
-Release process documentation:
+For release mechanics, see [docs/RELEASE_PROCESS.md](./docs/RELEASE_PROCESS.md).
 
-- [docs/RELEASE_PROCESS.md](./docs/RELEASE_PROCESS.md)
+## Privacy and local profile
+
+Do not commit personal profile data to the repository.
+
+- `user.example.md` is a safe template.
+- `user.local.md` is the preferred local-only file for real personal preferences.
+- the runtime reads `user.local.md` first and only falls back to `user.md` for older local setups.
+
+If you create a local profile, keep it out of version control.
 
 ## Documentation
 
-Project and governance documentation lives under [`docs/`](./docs).
+Project documentation lives in [docs](./docs).
 
-Recommended starting points:
+Good starting points:
 
-- [Architecture Overview](./docs/ARCHITECTURE_OVERVIEW.md)
-- [Local Setup](./docs/LOCAL_SETUP.md)
-- [API Contracts](./docs/API_CONTRACTS.md)
-- [Security Model](./docs/SECURITY_MODEL.md)
-- [Commercial Model](./docs/COMMERCIAL_MODEL.md)
-- [Maintainer Guide](./docs/MAINTAINER_GUIDE.md)
+- [docs/ARCHITECTURE_OVERVIEW.md](./docs/ARCHITECTURE_OVERVIEW.md)
+- [docs/API_CONTRACTS.md](./docs/API_CONTRACTS.md)
+- [docs/SECURITY_MODEL.md](./docs/SECURITY_MODEL.md)
+- [docs/PLUGIN_GUIDE.md](./docs/PLUGIN_GUIDE.md)
+- [docs/MAINTAINER_GUIDE.md](./docs/MAINTAINER_GUIDE.md)
 
 ## Contributing
 
-Contributions are welcome, but this repository has explicit legal and governance rules.
+Community contributions are welcome under the project contribution policy.
 
-- Community source is licensed under `AGPL-3.0-only`
-- Commercial use is available under a separate license
-- Contributors are expected to follow the CLA process
+Please read:
 
-Read:
-
-- [CLA.md](./CLA.md)
-- [COMMERCIAL-LICENSE.md](./COMMERCIAL-LICENSE.md)
 - [CONTRIBUTING.md](./CONTRIBUTING.md)
+- [CLA.md](./CLA.md)
+- [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+- [docs/CONTRIBUTOR_LADDER.md](./docs/CONTRIBUTOR_LADDER.md)
 
 ## Security
 
-Do not report vulnerabilities through public issues.
-
-Use the private reporting path described in [SECURITY.md](./SECURITY.md).
+If you discover a vulnerability or sensitive data exposure, follow [SECURITY.md](./SECURITY.md) instead of opening a public issue first.
 
 ## License
 
-This repository is licensed under:
+This repository is licensed under `AGPL-3.0-only`.
 
-```text
-GNU Affero General Public License v3.0 only
-SPDX-License-Identifier: AGPL-3.0-only
-```
-
-See [LICENSE](./LICENSE).
-
-If you need proprietary distribution, private deployment rights, or commercial support terms, see [COMMERCIAL-LICENSE.md](./COMMERCIAL-LICENSE.md).
-
-## Third-party notices
-
-Third-party bundled assets and notices are documented in:
-
-- [NOTICE](./NOTICE)
-- [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)
+- Open source terms: [LICENSE](./LICENSE)
+- Commercial licensing path: [COMMERCIAL-LICENSE.md](./COMMERCIAL-LICENSE.md)
+- Third-party notices: [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)

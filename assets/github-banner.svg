@@ -1,0 +1,25 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="640" fill="#0C0C0E"/>
+  <rect x="48" y="48" width="1184" height="544" rx="20" fill="#111113" stroke="#2C2C2E" stroke-width="2"/>
+  <rect x="96" y="96" width="1088" height="80" rx="12" fill="#151518" stroke="#2C2C2E"/>
+  <circle cx="132" cy="136" r="10" fill="#FF6B6B"/>
+  <circle cx="164" cy="136" r="10" fill="#F7B955"/>
+  <circle cx="196" cy="136" r="10" fill="#70D77B"/>
+  <text x="240" y="148" fill="#F4F4F5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="28">Mia</text>
+  <rect x="820" y="112" width="132" height="48" rx="10" fill="#DFF9A6"/>
+  <text x="854" y="144" fill="#0C0C0E" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="24">agent</text>
+  <text x="96" y="260" fill="#F4F4F5" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="78" font-weight="700">Desktop-first personal AI agent</text>
+  <text x="100" y="326" fill="#8E8E93" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="30">chat  ·  memory  ·  tool execution  ·  local computer control</text>
+  <rect x="96" y="384" width="540" height="156" rx="16" fill="#151518" stroke="#38383A"/>
+  <text x="124" y="424" fill="#DFF9A6" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="28">&gt; open wikipedia, search algebra</text>
+  <text x="124" y="466" fill="#C7C7CC" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="24">browser_task   computer_observe   click_screen</text>
+  <text x="124" y="506" fill="#8E8E93" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="22">done in 4.2s · visible execution trace</text>
+  <rect x="694" y="384" width="392" height="156" rx="16" fill="#151518" stroke="#38383A"/>
+  <rect x="730" y="418" width="84" height="84" rx="12" fill="#1C1C1F" stroke="#38383A"/>
+  <rect x="846" y="418" width="84" height="84" rx="12" fill="#1C1C1F" stroke="#38383A"/>
+  <rect x="962" y="418" width="84" height="84" rx="12" fill="#1C1C1F" stroke="#38383A"/>
+  <circle cx="772" cy="460" r="16" fill="#DFF9A6"/>
+  <circle cx="888" cy="460" r="16" fill="#F4F4F5"/>
+  <circle cx="1004" cy="460" r="16" fill="#8E8E93"/>
+  <text x="722" y="562" fill="#8E8E93" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="20">agent room · runs · sessions · memory</text>
+</svg>

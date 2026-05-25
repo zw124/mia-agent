@@ -6,5 +6,4 @@ def test_load_user_profile_reads_root_user_md() -> None:
 
     profile = load_user_profile()
 
-    assert "Mia User Profile" in profile
-    assert "Preferred language: Chinese" in profile
+    assert profile == "No local user.local.md profile found."

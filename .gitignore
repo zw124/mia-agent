@@ -22,6 +22,8 @@ __pycache__/
 .env.*.local
 apps/**/.env
 apps/**/.env.local
+user.local.md
+user.md
 
 # logs
 *.log
