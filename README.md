@@ -1,10 +1,20 @@
-# Mia
+<p align="center">
+  <img src="./assets/mia-logo.png" alt="Mia logo" width="124" />
+</p>
 
-![Mia banner](./assets/github-banner.svg)
+<h1 align="center">Mia</h1>
 
-> A desktop-first personal AI agent with chat, memory, tool execution, and local computer control.
+<p align="center">
+  A desktop-first personal AI agent with chat, memory, tool execution, and local computer control.
+</p>
 
-[Website](https://mia-agent-one.vercel.app) · [Desktop Release](https://github.com/zw124/mia-agent/releases/tag/v0.1.0) · [Documentation](./docs) · [Contributing](./CONTRIBUTING.md) · [Commercial Licensing](./COMMERCIAL-LICENSE.md)
+<p align="center">
+  <a href="https://mia-agent-one.vercel.app">Website</a> ·
+  <a href="https://github.com/zw124/mia-agent/releases/tag/v0.1.0">Desktop Release</a> ·
+  <a href="./docs">Documentation</a> ·
+  <a href="./CONTRIBUTING.md">Contributing</a> ·
+  <a href="./COMMERCIAL-LICENSE.md">Commercial Licensing</a>
+</p>
 
 ## Overview
 
@@ -265,6 +275,16 @@ Please read:
 ## Security
 
 If you discover a vulnerability or sensitive data exposure, follow [SECURITY.md](./SECURITY.md) instead of opening a public issue first.
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=zw124%2Fmia-agent&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=zw124/mia-agent&type=date&theme=dark&legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=zw124/mia-agent&type=date&legend=top-left" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=zw124/mia-agent&type=date&legend=top-left" />
+  </picture>
+</a>
 
 ## License
 
